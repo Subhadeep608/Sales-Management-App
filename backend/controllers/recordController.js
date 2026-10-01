@@ -9,15 +9,13 @@ const { getPagination, buildPaginationResult } = require('../utils/paginate');
 
 const MANUAL_ENTRY_FILE_NAME = 'Manually Added Records';
 
-// GET /api/records (admin) ?search=&status=&city=&product=&assignedTo=&unassigned=true&importBatch=&page=&limit=
+// GET /api/records (admin)
 const listRecords = asyncHandler(async (req, res) => {
-  const { search, status, city, product, assignedTo, unassigned, importBatch } = req.query;
+  const { search, status, assignedTo, unassigned, importBatch } = req.query;
   const { page, limit, skip } = getPagination(req.query);
 
   const filter = {};
   if (status) filter.status = status;
-  if (city) filter.city = { $regex: city, $options: 'i' };
-  if (product) filter.product = { $regex: product, $options: 'i' };
   if (importBatch) filter.importBatch = importBatch;
   if (unassigned === 'true') filter.assignedTo = null;
   else if (assignedTo) filter.assignedTo = assignedTo;
@@ -53,7 +51,7 @@ const getRecord = asyncHandler(async (req, res) => {
 
 // PUT /api/records/:id (admin) - edit core fields
 const updateRecord = asyncHandler(async (req, res) => {
-  const { customerName, phone, email, company, city, product } = req.body;
+  const { customerName, phone, email, leadSource } = req.body;
 
   const record = await Record.findById(req.params.id);
   if (!record) throw new AppError('Record not found.', 404);
@@ -61,9 +59,7 @@ const updateRecord = asyncHandler(async (req, res) => {
   if (customerName !== undefined) record.customerName = customerName;
   if (phone !== undefined) record.phone = phone;
   if (email !== undefined) record.email = email;
-  if (company !== undefined) record.company = company;
-  if (city !== undefined) record.city = city;
-  if (product !== undefined) record.product = product;
+  if (leadSource !== undefined) record.leadSource = leadSource;
 
   await record.save();
 
@@ -71,20 +67,24 @@ const updateRecord = asyncHandler(async (req, res) => {
 });
 
 // DELETE /api/records/:id (admin)
+// Also decrements the parent Import's row counters so file-level totals stay accurate.
 const deleteRecord = asyncHandler(async (req, res) => {
   const record = await Record.findByIdAndDelete(req.params.id);
   if (!record) throw new AppError('Record not found.', 404);
+
+  if (record.importBatch) {
+    await Import.updateOne(
+      { _id: record.importBatch },
+      { $inc: { totalRows: -1, importedCount: -1 } }
+    );
+  }
+
   res.status(200).json({ success: true, message: 'Record deleted successfully.' });
 });
 
 // POST /api/records/manual (admin)
-// Lets the admin add one raw record by hand and assign it to an employee in
-// one step, from the Assignments tab. Every manual record is grouped under a
-// single shared "file" (an Import doc with source: 'manual') so it appears
-// automatically in the admin Records tab and the employee's My Records tab —
-// both already list by Import, so no other page needs to change.
 const createManualRecord = asyncHandler(async (req, res) => {
-  const { customerName, phone, email, company, city, product, employeeId } = req.body;
+  const { customerName, phone, email, leadSource, employeeId } = req.body;
 
   const employee = await User.findOne({ _id: employeeId, role: 'employee' });
   if (!employee) throw new AppError('Employee not found.', 404);
@@ -107,9 +107,7 @@ const createManualRecord = asyncHandler(async (req, res) => {
     customerName,
     phone,
     email: email || '',
-    company: company || '',
-    city: city || '',
-    product: product || '',
+    leadSource: leadSource || '',
     assignedTo: employee._id,
     importBatch: importDoc._id,
   });

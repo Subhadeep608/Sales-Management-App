@@ -20,7 +20,6 @@ import Reports from './pages/admin/Reports';
 import EmployeeLayout from './layouts/EmployeeLayout';
 import EmployeeDashboard from './pages/employee/EmployeeDashboard';
 import MyRecords from './pages/employee/MyRecords';
-import MyFileRecords from './pages/employee/MyFileRecords';
 import EmployeeRecordDetail from './pages/employee/RecordDetail';
 
 function HomeRedirect() {
@@ -57,7 +56,6 @@ export default function App() {
                 <Route element={<EmployeeLayout />}>
                   <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
                   <Route path="/employee/records" element={<MyRecords />} />
-                  <Route path="/employee/records/file/:importId" element={<MyFileRecords />} />
                   <Route path="/employee/records/:id" element={<EmployeeRecordDetail />} />
                 </Route>
               </Route>

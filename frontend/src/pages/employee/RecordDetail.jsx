@@ -1,27 +1,34 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import { STATUS_OPTIONS } from '../../components/StatusBadge';
 import { useToast } from '../../context/ToastContext';
 
 export default function EmployeeRecordDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { showToast } = useToast();
   const [record, setRecord] = useState(null);
   const [activities, setActivities] = useState([]);
+  const [error, setError] = useState('');
+
+  const [infoForm, setInfoForm] = useState(null);
+  const [savingInfo, setSavingInfo] = useState(false);
+
   const [status, setStatus] = useState('');
   const [comment, setComment] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
-
-
+  const [savingWork, setSavingWork] = useState(false);
 
   const load = async () => {
     try {
       const res = await api.get(`/employee/records/${id}`);
       setRecord(res.data.record);
+      setInfoForm({
+        customerName: res.data.record.customerName,
+        phone: res.data.record.phone,
+        email: res.data.record.email,
+      });
       setStatus(res.data.record.status);
       setFollowUpDate(res.data.record.followUpDate ? res.data.record.followUpDate.substring(0, 10) : '');
       const act = await api.get('/activities', { params: { recordId: id } });
@@ -36,9 +43,23 @@ export default function EmployeeRecordDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const handleSave = async (e) => {
+  const handleSaveInfo = async (e) => {
     e.preventDefault();
-    setSaving(true);
+    setSavingInfo(true);
+    try {
+      await api.put(`/employee/records/${id}`, infoForm);
+      showToast('Record updated successfully.');
+      load();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Unable to update record.', 'error');
+    } finally {
+      setSavingInfo(false);
+    }
+  };
+
+  const handleSaveWork = async (e) => {
+    e.preventDefault();
+    setSavingWork(true);
     try {
       await api.put(`/employee/records/${id}`, {
         status,
@@ -51,12 +72,12 @@ export default function EmployeeRecordDetail() {
     } catch (err) {
       showToast(err.response?.data?.message || 'Unable to save changes.', 'error');
     } finally {
-      setSaving(false);
+      setSavingWork(false);
     }
   };
 
   if (error) return <div className="text-red-600 text-sm">{error}</div>;
-  if (!record) return <p className="text-sm text-gray-500">Loading...</p>;
+  if (!record || !infoForm) return <p className="text-sm text-gray-500">Loading...</p>;
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -64,28 +85,47 @@ export default function EmployeeRecordDetail() {
         &larr; Back
       </button>
 
-      <div className="card p-5 space-y-3">
+      <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-gray-800">{record.customerName}</h1>
-        <div className="grid sm:grid-cols-2 gap-3 text-sm text-gray-600">
-          <p>
-            <span className="font-medium text-gray-800">Phone:</span> {record.phone}
-          </p>
-          <p>
-            <span className="font-medium text-gray-800">Email:</span> {record.email || '-'}
-          </p>
-          <p>
-            <span className="font-medium text-gray-800">Company:</span> {record.company || '-'}
-          </p>
-          <p>
-            <span className="font-medium text-gray-800">City:</span> {record.city || '-'}
-          </p>
-          <p>
-            <span className="font-medium text-gray-800">Product:</span> {record.product || '-'}
-          </p>
-        </div>
       </div>
 
-      <form onSubmit={handleSave} className="card p-5 space-y-4">
+      <form onSubmit={handleSaveInfo} className="card p-5 grid sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+          <input
+            className="input"
+            value={infoForm.customerName || ''}
+            onChange={(e) => setInfoForm({ ...infoForm, customerName: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+          <input
+            className="input"
+            value={infoForm.phone || ''}
+            onChange={(e) => setInfoForm({ ...infoForm, phone: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input
+            className="input"
+            value={infoForm.email || ''}
+            onChange={(e) => setInfoForm({ ...infoForm, email: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Lead Source</label>
+          <input className="input bg-gray-50 text-gray-500" value={record.leadSource || '-'} disabled readOnly />
+        </div>
+        <div className="sm:col-span-2 flex justify-end">
+          <button type="submit" className="btn-primary" disabled={savingInfo}>
+            {savingInfo ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </form>
+
+      <form onSubmit={handleSaveWork} className="card p-5 space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
           <select className="input" value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -116,8 +156,8 @@ export default function EmployeeRecordDetail() {
           />
         </div>
         <div className="flex justify-end">
-          <button type="submit" className="btn-primary" disabled={saving}>
-            {saving ? 'Saving...' : 'Save'}
+          <button type="submit" className="btn-primary" disabled={savingWork}>
+            {savingWork ? 'Saving...' : 'Save'}
           </button>
         </div>
       </form>

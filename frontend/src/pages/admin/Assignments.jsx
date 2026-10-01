@@ -135,8 +135,6 @@ export default function Assignments() {
               onChange={(e) => setManualForm({ ...manualForm, email: e.target.value })}
             />
           </div>
-
-
           <div>
             <label className="block text-xs text-gray-500 mb-1">Lead Source</label>
             <input
@@ -146,7 +144,7 @@ export default function Assignments() {
               onChange={(e) => setManualForm({ ...manualForm, leadSource: e.target.value })}
             />
           </div>
-          <div className="sm:col-span-2 lg:col-span-2">
+          <div className="sm:col-span-2 lg:col-span-1">
             <label className="block text-xs text-gray-500 mb-1">Assign To *</label>
             <select
               className="input"
@@ -162,7 +160,7 @@ export default function Assignments() {
               ))}
             </select>
           </div>
-          <div className="flex items-end">
+          <div className="flex items-end sm:col-span-2 lg:col-span-1">
             <button type="submit" className="btn-primary w-full" disabled={savingManual}>
               {savingManual ? 'Adding...' : 'Add & Assign'}
             </button>

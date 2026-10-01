@@ -14,13 +14,14 @@ export default function AdminLayout() {
   const { user, logout } = useAuth();
 
   return (
-    <div className="min-h-screen flex">
-      <aside className="w-60 bg-white border-r border-gray-200 hidden md:flex md:flex-col">
-        <div className="px-5 py-5 border-b border-gray-200">
+    <div className="h-screen flex overflow-hidden">
+      {/* Sidebar - fixed, never scrolls */}
+      <aside className="w-60 bg-white border-r border-gray-200 hidden md:flex md:flex-col shrink-0 h-screen">
+        <div className="px-5 py-5 border-b border-gray-200 shrink-0">
           <p className="font-bold text-brand-700">Sales & Marketing</p>
           <p className="text-xs text-gray-400">Admin Panel</p>
         </div>
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {links.map((link) => (
             <NavLink
               key={link.to}
@@ -37,19 +38,21 @@ export default function AdminLayout() {
         </nav>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className="bg-white border-b border-gray-200 px-4 md:px-6 py-3 flex items-center justify-between">
+      {/* Right side: fixed header + scrollable content below it */}
+      <div className="flex-1 flex flex-col min-w-0 h-screen">
+        <header className="bg-white border-b border-gray-200 px-4 md:px-6 py-3 flex items-center justify-between shrink-0">
           <p className="text-sm text-gray-500 md:hidden font-semibold text-brand-700">Sales & Marketing</p>
           <div className="ml-auto flex items-center gap-4">
-            <span className="text-sm text-gray-600">
-              {user?.name} <span className="text-gray-400">({user?.employeeId})</span>
+            <span className="text-sm text-orange-600 font-bold">
+              {/* {user?.name} <span className="text-gray-400">({user?.employeeId})</span> */}
+              PPM <span className="text-gray-400"> (Admin)</span>
             </span>
             <button onClick={logout} className="btn-secondary px-3 py-1.5 text-xs">
               Logout
             </button>
           </div>
         </header>
-        <main className="flex-1 p-4 md:p-6 overflow-x-hidden">
+        <main className="flex-1 p-4 md:p-6 overflow-y-auto overflow-x-hidden">
           <Outlet />
         </main>
       </div>

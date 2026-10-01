@@ -20,12 +20,13 @@ export default function ImportRecords() {
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({ search: '', status: '' });
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState([]);
 
-  const [employees, setEmployees] = useState([]);
-  const [showAssign, setShowAssign] = useState(false);
-  const [assignTo, setAssignTo] = useState('');
-  const [assigning, setAssigning] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadImport = async () => {
     const res = await api.get(`/imports/${importId}`);
@@ -58,40 +59,49 @@ export default function ImportRecords() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [importId, page]);
 
-  useEffect(() => {
-    api.get('/employees', { params: { limit: 100, status: 'active' } }).then((res) => setEmployees(res.data.data));
-  }, []);
-
   const applyFilters = (e) => {
     e.preventDefault();
     setPage(1);
     loadRecords();
   };
 
-  const toggleSelect = (id) => {
-    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const startEdit = (record) => {
+    setEditTarget(record);
+    setEditForm({
+      customerName: record.customerName,
+      phone: record.phone,
+      email: record.email,
+      leadSource: record.leadSource,
+    });
   };
 
-  const toggleSelectAll = () => {
-    if (selected.length === records.length) setSelected([]);
-    else setSelected(records.map((r) => r._id));
-  };
-
-  const handleAssign = async () => {
-    if (!assignTo) return;
-    setAssigning(true);
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    setSavingEdit(true);
     try {
-      const res = await api.post('/assignments', { recordIds: selected, employeeId: assignTo });
-      showToast(res.data.message);
-      setShowAssign(false);
-      setSelected([]);
-      setAssignTo('');
+      await api.put(`/records/${editTarget._id}`, editForm);
+      showToast('Record updated successfully.');
+      setEditTarget(null);
+      loadRecords();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Unable to update record.', 'error');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.delete(`/records/${deleteTarget._id}`);
+      showToast('Record deleted successfully.');
+      setDeleteTarget(null);
       loadRecords();
       loadImport();
     } catch (err) {
-      showToast(err.response?.data?.message || 'Unable to assign records.', 'error');
+      showToast(err.response?.data?.message || 'Unable to delete record.', 'error');
     } finally {
-      setAssigning(false);
+      setDeleting(false);
     }
   };
 
@@ -110,11 +120,6 @@ export default function ImportRecords() {
             Assigned To: <span className="font-medium text-gray-700">{assignedToSummary?.label}</span>
           </p>
         </div>
-        {selected.length > 0 && (
-          <button className="btn-primary" onClick={() => setShowAssign(true)}>
-            Assign {selected.length} Selected
-          </button>
-        )}
       </div>
 
       <div className="flex flex-wrap items-end gap-2">
@@ -159,9 +164,6 @@ export default function ImportRecords() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
-                <th className="px-4 py-2">
-                  <input type="checkbox" checked={selected.length === records.length} onChange={toggleSelectAll} />
-                </th>
                 <th className="px-4 py-2">Sr. No.</th>
                 <th className="px-4 py-2">Name</th>
                 <th className="px-4 py-2">Phone</th>
@@ -169,7 +171,7 @@ export default function ImportRecords() {
                 <th className="px-4 py-2">Lead Source</th>
                 <th className="px-4 py-2">Date</th>
                 <th className="px-4 py-2">Time</th>
-                <th className="px-4 py-2"></th>
+                <th className="px-4 py-2">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -178,9 +180,6 @@ export default function ImportRecords() {
                 const leadSource = r.leadSource || importDoc.leadSource || '-';
                 return (
                   <tr key={r._id}>
-                    <td className="px-4 py-2">
-                      <input type="checkbox" checked={selected.includes(r._id)} onChange={() => toggleSelect(r._id)} />
-                    </td>
                     <td className="px-4 py-2 text-gray-500">{(page - 1) * PAGE_SIZE + i + 1}</td>
                     <td className="px-4 py-2 font-medium">{r.customerName}</td>
                     <td className="px-4 py-2">{r.phone}</td>
@@ -188,10 +187,13 @@ export default function ImportRecords() {
                     <td className="px-4 py-2">{leadSource}</td>
                     <td className="px-4 py-2 whitespace-nowrap">{ts.toLocaleDateString()}</td>
                     <td className="px-4 py-2 whitespace-nowrap">{ts.toLocaleTimeString()}</td>
-                    <td className="px-4 py-2">
-                      <Link to={`/admin/records/detail/${r._id}`} className="text-brand-600 hover:underline text-xs">
-                        View
-                      </Link>
+                    <td className="px-4 py-2 space-x-2 whitespace-nowrap">
+                      <button className="text-brand-600 hover:underline text-xs" onClick={() => startEdit(r)}>
+                        Edit
+                      </button>
+                      <button className="text-red-600 hover:underline text-xs" onClick={() => setDeleteTarget(r)}>
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 );
@@ -201,25 +203,67 @@ export default function ImportRecords() {
         )}
       </div>
 
-      <Modal open={showAssign} onClose={() => setShowAssign(false)} title={`Assign ${selected.length} Record(s)`}>
-        <div className="space-y-3">
-          <label className="block text-sm font-medium text-gray-700">Assign to employee</label>
-          <select className="input" value={assignTo} onChange={(e) => setAssignTo(e.target.value)}>
-            <option value="">-- Select employee --</option>
-            {employees.map((emp) => (
-              <option key={emp._id} value={emp._id}>
-                {emp.name} ({emp.employeeId})
-              </option>
-            ))}
-          </select>
-          <div className="flex justify-end gap-2 pt-2">
-            <button className="btn-secondary" onClick={() => setShowAssign(false)}>
-              Cancel
-            </button>
-            <button className="btn-primary" disabled={!assignTo || assigning} onClick={handleAssign}>
-              {assigning ? 'Assigning...' : 'Assign'}
-            </button>
-          </div>
+      <Modal open={!!editTarget} onClose={() => setEditTarget(null)} title="Edit Record">
+        {editForm && (
+          <form onSubmit={handleSaveEdit} className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+              <input
+                className="input"
+                value={editForm.customerName || ''}
+                onChange={(e) => setEditForm({ ...editForm, customerName: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <input
+                className="input"
+                value={editForm.phone || ''}
+                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                className="input"
+                value={editForm.email || ''}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Lead Source</label>
+              <input
+                className="input"
+                value={editForm.leadSource || ''}
+                onChange={(e) => setEditForm({ ...editForm, leadSource: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button type="button" className="btn-secondary" onClick={() => setEditTarget(null)}>
+                Cancel
+              </button>
+              <button type="submit" className="btn-primary" disabled={savingEdit}>
+                {savingEdit ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete Record">
+        <p className="text-sm text-gray-600">
+          This will permanently delete <span className="font-medium">{deleteTarget?.customerName}</span> from the
+          database, including their comments and activity history. This cannot be undone.
+        </p>
+        <div className="flex justify-end gap-2 pt-4">
+          <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>
+            Cancel
+          </button>
+          <button className="btn-danger" disabled={deleting} onClick={handleDelete}>
+            {deleting ? 'Deleting...' : 'OK, Delete'}
+          </button>
         </div>
       </Modal>
     </div>

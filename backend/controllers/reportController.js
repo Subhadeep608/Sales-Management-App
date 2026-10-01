@@ -43,13 +43,13 @@ const dailyReport = asyncHandler(async (req, res) => {
   if (start) recordCreateMatch.createdAt = { $gte: start, $lt: end };
 
   const recordsInRange = await Record.find(recordCreateMatch)
-    .select('customerName phone email status assignedTo importBatch createdAt')
+    .select('customerName phone email status leadSource assignedTo importBatch createdAt')
     .lean();
 
   const allRecordIds = new Set([...recordEventMap.keys(), ...recordsInRange.map((r) => String(r._id))]);
 
   const allRecords = await Record.find({ _id: { $in: [...allRecordIds] } })
-    .select('customerName phone email status assignedTo importBatch createdAt')
+    .select('customerName phone email status leadSource assignedTo importBatch createdAt')
     .lean();
   const allRecordMap = new Map(allRecords.map((r) => [String(r._id), r]));
 
@@ -86,9 +86,9 @@ const dailyReport = asyncHandler(async (req, res) => {
       email: record.email || '',
       status: recordStatus,
       timestamp,
+      leadSource: record.leadSource || '',
       employeeObjId: employeeObjId ? String(employeeObjId) : null,
       importId: record.importBatch ? String(record.importBatch) : null,
-      leadSource: record.leadSource || '', // <-- add this line
     });
   });
 
@@ -132,7 +132,6 @@ const dailyReport = asyncHandler(async (req, res) => {
     );
   }
 
-  // Summary reflects the currently filtered set, not the whole database.
   const summary = {
     totalListed: allRows.length,
     totalInterested: allRows.filter((r) => r.status === 'interested').length,

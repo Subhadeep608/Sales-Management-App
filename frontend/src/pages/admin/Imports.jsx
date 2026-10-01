@@ -13,7 +13,7 @@ export default function Imports() {
   const [pagination, setPagination] = useState(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('file'); // 'file' = Excel imports, 'myfile' = manually added records
+  const [tab, setTab] = useState('file');
 
   const [editTarget, setEditTarget] = useState(null);
   const [editName, setEditName] = useState('');
@@ -79,17 +79,15 @@ export default function Imports() {
 
       <div className="flex gap-1 border-b border-gray-200">
         <button
-          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-            tab === 'file' ? 'border-brand-600 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${tab === 'file' ? 'border-brand-600 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
           onClick={() => setTab('file')}
         >
           File
         </button>
         <button
-          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-            tab === 'myfile' ? 'border-brand-600 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-          }`}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${tab === 'myfile' ? 'border-brand-600 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
           onClick={() => setTab('myfile')}
         >
           My File
@@ -122,8 +120,12 @@ export default function Imports() {
                 <th className="px-4 py-2">File Name</th>
                 <th className="px-4 py-2">Uploaded By</th>
                 <th className="px-4 py-2">Total Rows</th>
-                <th className="px-4 py-2">Imported</th>
-                <th className="px-4 py-2">Failed</th>
+                {tab === 'file' && (
+                  <>
+                    <th className="px-4 py-2">Imported</th>
+                    <th className="px-4 py-2">Failed</th>
+                  </>
+                )}
                 <th className="px-4 py-2">Date</th>
                 <th className="px-4 py-2">Actions</th>
               </tr>
@@ -136,9 +138,13 @@ export default function Imports() {
                   <td className="px-4 py-2">
                     {imp.uploadedBy?.name} ({imp.uploadedBy?.employeeId})
                   </td>
-                  <td className="px-4 py-2">{imp.totalRows}</td>
-                  <td className="px-4 py-2 text-green-700">{imp.importedCount}</td>
-                  <td className="px-4 py-2 text-red-600">{imp.failedCount}</td>
+                  <td className="px-4 py-2">{imp.totalRows - 1}</td>
+                  {tab === 'file' && (
+                    <>
+                      <td className="px-4 py-2 text-green-700">{imp.importedCount}</td>
+                      <td className="px-4 py-2 text-red-600">{imp.failedCount}</td>
+                    </>
+                  )}
                   <td className="px-4 py-2 text-xs text-gray-400">{new Date(imp.createdAt).toLocaleString()}</td>
                   <td className="px-4 py-2 space-x-2 whitespace-nowrap">
                     <button

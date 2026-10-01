@@ -6,16 +6,14 @@ const FIELD_LABELS = {
   customerName: 'Customer Name *',
   phone: 'Phone *',
   email: 'Email',
-  company: 'Company',
-  city: 'City',
-  product: 'Product',
 };
 
 export default function ImportExcel() {
   const { showToast } = useToast();
   const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null); // { headers, appFields, suggestedMapping, sampleRows, rows, totalRows, fileName }
+  const [preview, setPreview] = useState(null);
   const [mapping, setMapping] = useState({});
+  const [leadSource, setLeadSource] = useState('');
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState(null);
@@ -50,11 +48,13 @@ export default function ImportExcel() {
         fileName: preview.fileName,
         columnMapping: mapping,
         rows: preview.rows,
+        leadSource,
       });
       setResult(res.data);
       showToast(res.data.message);
       setPreview(null);
       setFile(null);
+      setLeadSource('');
     } catch (err) {
       setError(err.response?.data?.message || 'Some rows could not be imported.');
     } finally {
@@ -63,13 +63,14 @@ export default function ImportExcel() {
   };
 
   const requiredMissing = ['customerName', 'phone'].filter((f) => !mapping[f]);
+  const canImport = requiredMissing.length === 0 && leadSource.trim().length > 0;
 
   return (
     <div className="space-y-6 max-w-4xl">
       <h1 className="text-xl font-semibold text-gray-800">Import Excel</h1>
       <p className="text-sm text-gray-500">
-        Upload an Excel file, map its columns to application fields, then import. Employees will only ever
-        see the imported records in this application — never the Excel file itself.
+        Upload an Excel file, map Name/Phone/Email, and write the lead source for this file. Employees will only
+        ever see the imported records in this application — never the Excel file itself.
       </p>
 
       {error && <div className="rounded-md bg-red-50 text-red-700 text-sm px-3 py-2">{error}</div>}
@@ -126,6 +127,21 @@ export default function ImportExcel() {
             )}
           </div>
 
+          <div className="card p-4">
+            <h2 className="font-medium text-gray-700 mb-3">Lead Source</h2>
+            <p className="text-sm text-gray-500 mb-3">
+              Write where this batch of leads came from (e.g. "Facebook Ads", "Website Form"). This value will be
+              shown against every record in this file.
+            </p>
+            <input
+              className="input max-w-md"
+              placeholder="e.g. Facebook Ads"
+              value={leadSource}
+              onChange={(e) => setLeadSource(e.target.value)}
+              required
+            />
+          </div>
+
           <div className="card p-4 overflow-x-auto">
             <h2 className="font-medium text-gray-700 mb-3">Preview (first {preview.sampleRows.length} rows)</h2>
             <table className="w-full text-xs">
@@ -156,11 +172,7 @@ export default function ImportExcel() {
             <button className="btn-secondary" onClick={() => setPreview(null)}>
               Cancel
             </button>
-            <button
-              className="btn-primary"
-              disabled={requiredMissing.length > 0 || importing}
-              onClick={handleImport}
-            >
+            <button className="btn-primary" disabled={!canImport || importing} onClick={handleImport}>
               {importing ? 'Importing...' : `Import ${preview.totalRows} Rows`}
             </button>
           </div>

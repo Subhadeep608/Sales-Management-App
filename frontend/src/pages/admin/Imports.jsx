@@ -13,6 +13,7 @@ export default function Imports() {
   const [pagination, setPagination] = useState(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState('file'); // 'file' = Excel imports, 'myfile' = manually added records
 
   const [editTarget, setEditTarget] = useState(null);
   const [editName, setEditName] = useState('');
@@ -24,7 +25,7 @@ export default function Imports() {
   const load = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/imports', { params: { page } });
+      const res = await api.get('/imports', { params: { page, limit: 100 } });
       setImports(res.data.data);
       setPagination(res.data.pagination);
     } catch {
@@ -68,22 +69,58 @@ export default function Imports() {
     }
   };
 
+  const filteredImports = imports.filter((imp) =>
+    tab === 'myfile' ? imp.source === 'manual' : imp.source !== 'manual'
+  );
+
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold text-gray-800">Records</h1>
-      <p className="text-sm text-gray-500">All imported Excel files. Open one to view and manage its records.</p>
+
+      <div className="flex gap-1 border-b border-gray-200">
+        <button
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            tab === 'file' ? 'border-brand-600 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+          onClick={() => setTab('file')}
+        >
+          File
+        </button>
+        <button
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            tab === 'myfile' ? 'border-brand-600 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+          onClick={() => setTab('myfile')}
+        >
+          My File
+        </button>
+      </div>
+
+      <p className="text-sm text-gray-500">
+        {tab === 'file'
+          ? 'All imported Excel files. Open one to view and manage its records.'
+          : 'Records added manually from the Assignments tab.'}
+      </p>
 
       <div className="card overflow-x-auto">
         {loading ? (
           <p className="p-6 text-sm text-gray-500">Loading...</p>
-        ) : imports.length === 0 ? (
-          <EmptyState title="No files imported yet" description="Go to Import Excel to upload your first file." />
+        ) : filteredImports.length === 0 ? (
+          <EmptyState
+            title={tab === 'file' ? 'No files imported yet' : 'No manual records added yet'}
+            description={
+              tab === 'file'
+                ? 'Go to Import Excel to upload your first file.'
+                : 'Go to Assignments → Add Manual Record to add one.'
+            }
+          />
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
                 <th className="px-4 py-2">Sr. No.</th>
                 <th className="px-4 py-2">File Name</th>
+                <th className="px-4 py-2">Uploaded By</th>
                 <th className="px-4 py-2">Total Rows</th>
                 <th className="px-4 py-2">Imported</th>
                 <th className="px-4 py-2">Failed</th>
@@ -92,10 +129,13 @@ export default function Imports() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {imports.map((imp, i) => (
+              {filteredImports.map((imp, i) => (
                 <tr key={imp._id}>
-                  <td className="px-4 py-2">{(pagination.page - 1) * pagination.limit + i + 1}</td>
+                  <td className="px-4 py-2">{i + 1}</td>
                   <td className="px-4 py-2 font-medium">{imp.fileName}</td>
+                  <td className="px-4 py-2">
+                    {imp.uploadedBy?.name} ({imp.uploadedBy?.employeeId})
+                  </td>
                   <td className="px-4 py-2">{imp.totalRows}</td>
                   <td className="px-4 py-2 text-green-700">{imp.importedCount}</td>
                   <td className="px-4 py-2 text-red-600">{imp.failedCount}</td>
@@ -125,10 +165,10 @@ export default function Imports() {
             </tbody>
           </table>
         )}
-        <Pagination pagination={pagination} onPageChange={setPage} />
+        {tab === 'file' && <Pagination pagination={pagination} onPageChange={setPage} />}
       </div>
 
-      <Modal open={!!editTarget} onClose={() => setEditTarget(null)} title="Rename Import File">
+      <Modal open={!!editTarget} onClose={() => setEditTarget(null)} title="Rename File">
         <form onSubmit={handleRename} className="space-y-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">File Name</label>
@@ -145,11 +185,11 @@ export default function Imports() {
         </form>
       </Modal>
 
-      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete Import File">
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete File">
         <p className="text-sm text-gray-600">
           This will permanently delete <span className="font-medium">{deleteTarget?.fileName}</span> and all{' '}
-          {deleteTarget?.importedCount} record(s) imported from it, including their comments and activity history.
-          This cannot be undone.
+          {deleteTarget?.importedCount} record(s) in it, including their comments and activity history. This cannot
+          be undone.
         </p>
         <div className="flex justify-end gap-2 pt-4">
           <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>

@@ -1,34 +1,26 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/axios';
-// import Pagination from '../../components/Pagination';
 import EmptyState from '../../components/EmptyState';
-// import { STATUS_OPTIONS } from '../../components/StatusBadge';
 import { useToast } from '../../context/ToastContext';
+
+const emptyManualForm = { customerName: '', phone: '', email: '', leadSource: '', employeeId: '' };
 
 export default function Assignments() {
   const { showToast } = useToast();
   const [employees, setEmployees] = useState([]);
 
-  // // Top: Bulk Assign by Filter (Status + Assign to only)
-  // const [filterStatus, setFilterStatus] = useState('');
-  // const [filterEmployeeId, setFilterEmployeeId] = useState('');
-  // const [assigningByFilter, setAssigningByFilter] = useState(false);
+  const [manualForm, setManualForm] = useState(emptyManualForm);
+  const [manualError, setManualError] = useState('');
+  const [savingManual, setSavingManual] = useState(false);
 
-  // Left card: Assign File to Employee
   const [imports, setImports] = useState([]);
   const [fileEmployeeId, setFileEmployeeId] = useState('');
   const [selectedFileId, setSelectedFileId] = useState('');
   const [assigningFile, setAssigningFile] = useState(false);
 
-  // Right card: File Assignments (with inline Edit)
   const [editingFileId, setEditingFileId] = useState(null);
   const [editEmployeeId, setEditEmployeeId] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
-
-  // // Bottom: Assignment History
-  // const [history, setHistory] = useState([]);
-  // const [pagination, setPagination] = useState(null);
-  const [page, setPage] = useState(1);
 
   useEffect(() => {
     api.get('/employees', { params: { limit: 100, status: 'active' } }).then((res) => setEmployees(res.data.data));
@@ -39,38 +31,25 @@ export default function Assignments() {
     setImports(res.data.data);
   };
 
-  const loadHistory = async () => {
-    const res = await api.get('/assignments', { params: { page } });
-    // setHistory(res.data.data);
-    setPagination(res.data.pagination);
-  };
-
   useEffect(() => {
     loadImports();
   }, []);
 
-  useEffect(() => {
-    loadHistory();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
-
-  // const handleBulkAssignByFilter = async (e) => {
-  //   e.preventDefault();
-  //   if (!filterEmployeeId) return;
-  //   setAssigningByFilter(true);
-  //   try {
-  //     const filter = {};
-  //     if (filterStatus) filter.status = filterStatus;
-  //     const res = await api.post('/assignments/bulk-by-filter', { filter, employeeId: filterEmployeeId });
-  //     showToast(res.data.message);
-  //     loadImports();
-  //     loadHistory();
-  //   } catch (err) {
-  //     showToast(err.response?.data?.message || 'Unable to assign records.', 'error');
-  //   } finally {
-  //     setAssigningByFilter(false);
-  //   }
-  // };
+  const handleAddManualRecord = async (e) => {
+    e.preventDefault();
+    setManualError('');
+    setSavingManual(true);
+    try {
+      const res = await api.post('/records/manual', manualForm);
+      showToast(res.data.message);
+      setManualForm(emptyManualForm);
+      loadImports();
+    } catch (err) {
+      setManualError(err.response?.data?.message || 'Unable to add record.');
+    } finally {
+      setSavingManual(false);
+    }
+  };
 
   const handleAssignFileToEmployee = async (e) => {
     e.preventDefault();
@@ -85,7 +64,6 @@ export default function Assignments() {
       setFileEmployeeId('');
       setSelectedFileId('');
       loadImports();
-      loadHistory();
     } catch (err) {
       showToast(err.response?.data?.message || 'Unable to assign file.', 'error');
     } finally {
@@ -110,7 +88,6 @@ export default function Assignments() {
       setEditingFileId(null);
       setEditEmployeeId('');
       loadImports();
-      loadHistory();
     } catch (err) {
       showToast(err.response?.data?.message || 'Unable to update assignment.', 'error');
     } finally {
@@ -122,29 +99,59 @@ export default function Assignments() {
     <div className="space-y-6">
       <h1 className="text-xl font-semibold text-gray-800">Assignments</h1>
 
-      {/* <div className="card p-5">
-        <h2 className="font-medium text-gray-700 mb-3">Bulk Assign by Filter</h2>
+      <div className="card p-5">
+        <h2 className="font-medium text-gray-700 mb-3">Add Manual Record</h2>
         <p className="text-sm text-gray-500 mb-4">
-          Assign every record matching the status below to one employee — useful for large batches.
+          Add a single customer record by hand and assign it directly to an employee — useful for a lead that
+          didn't come from an Excel file. It will appear under "Manually Added Records" in Records and in that
+          employee's My Records.
         </p>
-        <form onSubmit={handleBulkAssignByFilter} className="flex flex-wrap gap-2 items-end">
+        {manualError && <div className="mb-3 rounded-md bg-red-50 text-red-700 text-sm px-3 py-2">{manualError}</div>}
+        <form onSubmit={handleAddManualRecord} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Status</label>
-            <select className="input w-40" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-              <option value="">Any</option>
-              {STATUS_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+            <label className="block text-xs text-gray-500 mb-1">Customer Name *</label>
+            <input
+              className="input"
+              value={manualForm.customerName}
+              onChange={(e) => setManualForm({ ...manualForm, customerName: e.target.value })}
+              required
+            />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Assign to</label>
+            <label className="block text-xs text-gray-500 mb-1">Phone *</label>
+            <input
+              className="input"
+              value={manualForm.phone}
+              onChange={(e) => setManualForm({ ...manualForm, phone: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Email</label>
+            <input
+              type="email"
+              className="input"
+              value={manualForm.email}
+              onChange={(e) => setManualForm({ ...manualForm, email: e.target.value })}
+            />
+          </div>
+
+
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Lead Source</label>
+            <input
+              className="input"
+              placeholder="e.g. Referral, Walk-in"
+              value={manualForm.leadSource}
+              onChange={(e) => setManualForm({ ...manualForm, leadSource: e.target.value })}
+            />
+          </div>
+          <div className="sm:col-span-2 lg:col-span-2">
+            <label className="block text-xs text-gray-500 mb-1">Assign To *</label>
             <select
-              className="input w-48"
-              value={filterEmployeeId}
-              onChange={(e) => setFilterEmployeeId(e.target.value)}
+              className="input"
+              value={manualForm.employeeId}
+              onChange={(e) => setManualForm({ ...manualForm, employeeId: e.target.value })}
               required
             >
               <option value="">-- Select employee --</option>
@@ -155,11 +162,13 @@ export default function Assignments() {
               ))}
             </select>
           </div>
-          <button type="submit" className="btn-primary" disabled={assigningByFilter}>
-            {assigningByFilter ? 'Assigning...' : 'Assign Matching Records'}
-          </button>
+          <div className="flex items-end">
+            <button type="submit" className="btn-primary w-full" disabled={savingManual}>
+              {savingManual ? 'Adding...' : 'Add & Assign'}
+            </button>
+          </div>
         </form>
-      </div> */}
+      </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="card p-5">
@@ -250,8 +259,6 @@ export default function Assignments() {
           )}
         </div>
       </div>
-
-      
     </div>
   );
 }

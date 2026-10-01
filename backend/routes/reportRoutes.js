@@ -11,7 +11,7 @@ router.use(protect, authorize('admin'));
 
 router.get(
   '/daily',
-  [query('date').matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('date must be in YYYY-MM-DD format.')],
+  [query('date').optional({ checkFalsy: true }).matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('date must be in YYYY-MM-DD format.')],
   validate,
   dailyReport
 );

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import StatusBadge from '../../components/StatusBadge';
 import { useToast } from '../../context/ToastContext';
@@ -20,9 +20,7 @@ export default function AdminRecordDetail() {
       customerName: res.data.record.customerName,
       phone: res.data.record.phone,
       email: res.data.record.email,
-      company: res.data.record.company,
-      city: res.data.record.city,
-      product: res.data.record.product,
+      leadSource: res.data.record.leadSource,
     });
     const act = await api.get('/activities', { params: { recordId: id } });
     setActivities(act.data.data);
@@ -61,18 +59,30 @@ export default function AdminRecordDetail() {
       </div>
 
       <form onSubmit={handleSave} className="card p-5 grid sm:grid-cols-2 gap-4">
-        {['customerName', 'phone', 'email', 'company', 'city', 'product'].map((field) => (
-          <div key={field}>
-            <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
-              {field.replace(/([A-Z])/g, ' $1')}
-            </label>
-            <input
-              className="input"
-              value={form[field] || ''}
-              onChange={(e) => setForm({ ...form, [field]: e.target.value })}
-            />
-          </div>
-        ))}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+          <input
+            className="input"
+            value={form.customerName || ''}
+            onChange={(e) => setForm({ ...form, customerName: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+          <input className="input" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Lead Source</label>
+          <input
+            className="input"
+            value={form.leadSource || ''}
+            onChange={(e) => setForm({ ...form, leadSource: e.target.value })}
+          />
+        </div>
         <div className="sm:col-span-2 flex justify-end">
           <button type="submit" className="btn-primary" disabled={saving}>
             {saving ? 'Saving...' : 'Save Changes'}

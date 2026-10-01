@@ -4,117 +4,153 @@ const Activity = require('../models/Activity');
 const Import = require('../models/Import');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
+const { getPagination, buildPaginationResult } = require('../utils/paginate');
 
 const STATUS_LIST = ['pending', 'contacted', 'interested', 'follow_up', 'not_interested', 'converted'];
 const WORK_ACTIONS = ['status_change', 'comment_added', 'follow_up_set'];
 
-// GET /api/reports/daily?date=YYYY-MM-DD (admin)
+// GET /api/reports/daily?date=&status=&search=&employeeId=&page=&limit= (admin)
 const dailyReport = asyncHandler(async (req, res) => {
-  const { date } = req.query;
+  const { date, status, search, employeeId } = req.query;
+  const { page, limit, skip } = getPagination(req.query);
 
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    throw new AppError('A valid date (YYYY-MM-DD) is required.', 400);
+  let start = null;
+  let end = null;
+  if (date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new AppError('Invalid date format.', 400);
+    start = new Date(`${date}T00:00:00.000Z`);
+    if (Number.isNaN(start.getTime())) throw new AppError('Invalid date.', 400);
+    end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 1);
   }
 
-  const start = new Date(`${date}T00:00:00.000Z`);
-  if (Number.isNaN(start.getTime())) throw new AppError('Invalid date.', 400);
-  const end = new Date(start);
-  end.setUTCDate(end.getUTCDate() + 1);
+  const activityMatch = { action: { $in: WORK_ACTIONS } };
+  if (start) activityMatch.createdAt = { $gte: start, $lt: end };
 
-  // Every action an employee performed on a record within this date (UTC day boundaries).
-  const activities = await Activity.find({
-    createdAt: { $gte: start, $lt: end },
-    action: { $in: WORK_ACTIONS },
-  })
-    .sort({ createdAt: 1 })
+  const activities = await Activity.find(activityMatch).sort({ createdAt: 1 }).lean();
+
+  const recordEventMap = new Map();
+  activities.forEach((a) => {
+    const key = String(a.record);
+    const existing = recordEventMap.get(key) || { employee: null, lastStatusValue: null, timestamp: null };
+    existing.employee = a.employee;
+    existing.timestamp = a.createdAt;
+    if (a.action === 'status_change') existing.lastStatusValue = a.newValue;
+    recordEventMap.set(key, existing);
+  });
+
+  const recordCreateMatch = {};
+  if (start) recordCreateMatch.createdAt = { $gte: start, $lt: end };
+
+  const recordsInRange = await Record.find(recordCreateMatch)
+    .select('customerName phone email status assignedTo importBatch createdAt')
     .lean();
 
-  // key = `${employeeId}_${recordId}` -> tracks the record's status as of the LAST
-  // status_change made that day (ascending sort means later entries overwrite earlier ones).
-  const workedMap = new Map();
-  activities.forEach((a) => {
-    const key = `${a.employee}_${a.record}`;
-    const existing = workedMap.get(key) || { employee: a.employee, record: a.record, lastStatusValue: null };
-    if (a.action === 'status_change') existing.lastStatusValue = a.newValue;
-    workedMap.set(key, existing);
-  });
+  const allRecordIds = new Set([...recordEventMap.keys(), ...recordsInRange.map((r) => String(r._id))]);
 
-  const workedEntries = [...workedMap.values()];
-  const recordIds = [...new Set(workedEntries.map((w) => String(w.record)))];
+  const allRecords = await Record.find({ _id: { $in: [...allRecordIds] } })
+    .select('customerName phone email status assignedTo importBatch createdAt')
+    .lean();
+  const allRecordMap = new Map(allRecords.map((r) => [String(r._id), r]));
 
-  const records = await Record.find({ _id: { $in: recordIds } }).select('status importBatch').lean();
-  const recordMap = new Map(records.map((r) => [String(r._id), r]));
+  const employeeIdsNeeded = new Set();
+  const importIdsNeeded = new Set();
 
-  const importIds = [...new Set(records.map((r) => (r.importBatch ? String(r.importBatch) : null)).filter(Boolean))];
-  const imports = await Import.find({ _id: { $in: importIds } }).select('fileName').lean();
-  const importMap = new Map(imports.map((i) => [String(i._id), i]));
-
-  const employees = await User.find({ role: 'employee' }).select('name employeeId status').sort({ name: 1 }).lean();
-
-  // keyed by employee _id (string)
-  const perEmployee = new Map();
-  employees.forEach((emp) => {
-    perEmployee.set(String(emp._id), {
-      _id: emp._id,
-      employeeId: emp.employeeId,
-      name: emp.name,
-      status: emp.status,
-      totalRecordsWorked: 0,
-      statusBreakdown: STATUS_LIST.reduce((acc, s) => ({ ...acc, [s]: 0 }), {}),
-      sheetsMap: new Map(), // importId(string) -> workedToday count
-    });
-  });
-
-  workedEntries.forEach((w) => {
-    const empData = perEmployee.get(String(w.employee));
-    if (!empData) return; // activity by a user who is no longer a role:'employee' account
-
-    const record = recordMap.get(String(w.record));
+  const rows = [];
+  allRecordIds.forEach((recordId) => {
+    const record = allRecordMap.get(recordId);
     if (!record) return;
 
-    const resolvedStatus = w.lastStatusValue && STATUS_LIST.includes(w.lastStatusValue) ? w.lastStatusValue : record.status;
+    const event = recordEventMap.get(recordId);
+    let employeeObjId;
+    let recordStatus;
+    let timestamp;
 
-    empData.totalRecordsWorked += 1;
-    if (STATUS_LIST.includes(resolvedStatus)) empData.statusBreakdown[resolvedStatus] += 1;
-
-    if (record.importBatch) {
-      const importKey = String(record.importBatch);
-      empData.sheetsMap.set(importKey, (empData.sheetsMap.get(importKey) || 0) + 1);
+    if (event) {
+      employeeObjId = event.employee;
+      recordStatus = event.lastStatusValue && STATUS_LIST.includes(event.lastStatusValue) ? event.lastStatusValue : record.status;
+      timestamp = event.timestamp;
+    } else {
+      employeeObjId = record.assignedTo;
+      recordStatus = record.status;
+      timestamp = record.createdAt;
     }
+
+    if (employeeObjId) employeeIdsNeeded.add(String(employeeObjId));
+    if (record.importBatch) importIdsNeeded.add(String(record.importBatch));
+
+    rows.push({
+      recordId,
+      customerName: record.customerName,
+      phone: record.phone,
+      email: record.email || '',
+      status: recordStatus,
+      timestamp,
+      employeeObjId: employeeObjId ? String(employeeObjId) : null,
+      importId: record.importBatch ? String(record.importBatch) : null,
+      leadSource: record.leadSource || '', // <-- add this line
+    });
   });
 
-  const employeesReport = [];
-  for (const empData of perEmployee.values()) {
-    const sheets = [];
-    for (const [importId, workedToday] of empData.sheetsMap.entries()) {
-      const totalAssignedToEmployee = await Record.countDocuments({
-        importBatch: importId,
-        assignedTo: empData._id,
-      });
-      sheets.push({
-        importId,
-        fileName: importMap.get(importId)?.fileName || 'Unknown file',
-        totalAssignedToEmployee,
-        workedToday,
-      });
-    }
+  const [employeeDocs, importDocs] = await Promise.all([
+    User.find({ _id: { $in: [...employeeIdsNeeded] } }).select('name employeeId').lean(),
+    Import.find({ _id: { $in: [...importIdsNeeded] } }).select('fileName leadSource').lean(),
+  ]);
+  const employeeLookup = new Map(employeeDocs.map((e) => [String(e._id), e]));
+  const importLookup = new Map(importDocs.map((i) => [String(i._id), i]));
 
-    employeesReport.push({
-      employeeId: empData.employeeId,
-      name: empData.name,
-      status: empData.status,
-      totalRecordsWorked: empData.totalRecordsWorked,
-      statusBreakdown: empData.statusBreakdown,
-      sheets,
-    });
+  let allRows = rows.map((r) => {
+    const emp = r.employeeObjId ? employeeLookup.get(r.employeeObjId) : null;
+    const imp = r.importId ? importLookup.get(r.importId) : null;
+    return {
+      recordId: r.recordId,
+      customerName: r.customerName,
+      phone: r.phone,
+      email: r.email,
+      status: r.status,
+      timestamp: r.timestamp,
+      leadSource: r.leadSource || (imp ? imp.leadSource : '') || '-',
+      employeeObjId: r.employeeObjId,
+      employeeName: emp ? emp.name : 'Unassigned',
+      employeeCode: emp ? emp.employeeId : null,
+    };
+  });
+
+  if (status && STATUS_LIST.includes(status)) {
+    allRows = allRows.filter((r) => r.status === status);
+  }
+  if (employeeId) {
+    allRows = allRows.filter((r) => r.employeeObjId === employeeId);
+  }
+  if (search) {
+    const term = search.toLowerCase();
+    allRows = allRows.filter(
+      (r) =>
+        r.customerName.toLowerCase().includes(term) ||
+        r.phone.toLowerCase().includes(term) ||
+        (r.email && r.email.toLowerCase().includes(term))
+    );
   }
 
+  // Summary reflects the currently filtered set, not the whole database.
   const summary = {
-    totalEmployeesWorked: employeesReport.filter((e) => e.totalRecordsWorked > 0).length,
-    totalRecordsWorked: employeesReport.reduce((sum, e) => sum + e.totalRecordsWorked, 0),
+    totalListed: allRows.length,
+    totalInterested: allRows.filter((r) => r.status === 'interested').length,
+    totalContacted: allRows.filter((r) => r.status === 'contacted').length,
+    totalConverted: allRows.filter((r) => r.status === 'converted').length,
   };
 
-  res.status(200).json({ success: true, date, summary, employees: employeesReport });
+  allRows.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  const total = allRows.length;
+  const pageRows = allRows.slice(skip, skip + limit);
+
+  res.status(200).json({
+    success: true,
+    date: date || null,
+    summary,
+    ...buildPaginationResult(pageRows, total, page, limit),
+  });
 });
 
 module.exports = { dailyReport };

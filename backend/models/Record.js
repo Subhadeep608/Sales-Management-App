@@ -25,7 +25,8 @@ const recordSchema = new mongoose.Schema(
     company: { type: String, trim: true, maxlength: 150, default: '' },
     city: { type: String, trim: true, maxlength: 100, default: '' },
     product: { type: String, trim: true, maxlength: 150, default: '' },
-
+    
+    leadSource: { type: String, trim: true, maxlength: 150, default: '' },
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
 
     status: {

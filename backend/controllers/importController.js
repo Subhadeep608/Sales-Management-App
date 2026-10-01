@@ -8,7 +8,8 @@ const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { getPagination, buildPaginationResult } = require('../utils/paginate');
 
-const APP_FIELDS = ['customerName', 'phone', 'email', 'company', 'city', 'product'];
+// Only these 3 fields are extracted from an uploaded Excel file.
+const APP_FIELDS = ['customerName', 'phone', 'email'];
 const REQUIRED_FIELDS = ['customerName', 'phone'];
 
 const guessMapping = (headers) => {
@@ -18,9 +19,6 @@ const guessMapping = (headers) => {
     customerName: ['customername', 'clientname', 'name', 'fullname'],
     phone: ['phone', 'mobile', 'contact', 'phonenumber', 'mobilenumber'],
     email: ['email', 'emailaddress', 'mail'],
-    company: ['company', 'companyname', 'organization'],
-    city: ['city', 'location', 'place'],
-    product: ['product', 'interestedproduct', 'productinterest'],
   };
 
   headers.forEach((header) => {
@@ -70,14 +68,19 @@ const previewExcel = asyncHandler(async (req, res) => {
 });
 
 // POST /api/imports/confirm (admin)
+// Body: { fileName, columnMapping: { customerName, phone, email }, rows, leadSource }
+// leadSource is a single value the admin types, applied to every row of this file.
 const confirmImport = asyncHandler(async (req, res) => {
-  const { fileName, columnMapping, rows } = req.body;
+  const { fileName, columnMapping, rows, leadSource } = req.body;
 
   if (!columnMapping || typeof columnMapping !== 'object') {
     throw new AppError('Column mapping is required.', 400);
   }
   if (!Array.isArray(rows) || rows.length === 0) {
     throw new AppError('No rows to import.', 400);
+  }
+  if (!leadSource || !leadSource.trim()) {
+    throw new AppError('Lead source is required.', 400);
   }
 
   const missingRequired = REQUIRED_FIELDS.filter((f) => !columnMapping[f]);
@@ -88,6 +91,8 @@ const confirmImport = asyncHandler(async (req, res) => {
   const importDoc = await Import.create({
     fileName: fileName || 'import.xlsx',
     uploadedBy: req.user._id,
+    source: 'excel',
+    leadSource: leadSource.trim(),
     columnMapping,
     totalRows: rows.length,
   });
@@ -139,8 +144,6 @@ const confirmImport = asyncHandler(async (req, res) => {
 });
 
 // GET /api/imports (admin)
-// Each returned import now also carries `assignedToSummary` so the UI can show
-// "who is this file currently assigned to" without extra per-file requests.
 const listImports = asyncHandler(async (req, res) => {
   const { page, limit, skip } = getPagination(req.query);
 

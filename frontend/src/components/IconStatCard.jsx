@@ -1,11 +1,12 @@
 export default function IconStatCard({ icon, label, value, color = 'blue' }) {
   const colors = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    yellow: 'bg-yellow-50 text-yellow-600',
-    red: 'bg-red-50 text-red-600',
-    purple: 'bg-purple-50 text-purple-600',
-    gray: 'bg-gray-100 text-gray-600',
+    blue: 'bg-blue-400 text-blue-600',
+    green: 'bg-green-400 text-green-600',
+    yellow: 'bg-yellow-400 text-yellow-600',
+    red: 'bg-red-400 text-red-600',
+    purple: 'bg-purple-400 text-purple-600',
+    gray: 'bg-gray-400 text-gray-600',
+    lightgray: 'bg-gray-100 text-gray-600',
   };
 
   return (
@@ -14,8 +15,8 @@ export default function IconStatCard({ icon, label, value, color = 'blue' }) {
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide truncate">{label}</p>
-        <p className="text-xl font-semibold text-gray-800">{value}</p>
+        <p className="text-xs font-medium text-gray-800 uppercase tracking-wide truncate">{label}</p>
+        <p className="text-xl font-semibold text-gray-600">{value}</p>
       </div>
     </div>
   );

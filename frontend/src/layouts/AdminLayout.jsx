@@ -18,8 +18,7 @@ export default function AdminLayout() {
       {/* Sidebar - fixed, never scrolls */}
       <aside className="w-60 bg-white border-r border-gray-200 hidden md:flex md:flex-col shrink-0 h-screen">
         <div className="px-5 py-5 border-b border-gray-200 shrink-0">
-          <p className="font-bold text-brand-700">Sales & Marketing</p>
-          <p className="text-xs text-gray-400">Admin Panel</p>
+          <p className="font-bold text-orange-600">PPM <span className="text-brand-600">CRM</span></p>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {links.map((link) => (
@@ -45,9 +44,9 @@ export default function AdminLayout() {
           <div className="ml-auto flex items-center gap-4">
             <span className="text-sm text-orange-600 font-bold">
               {/* {user?.name} <span className="text-gray-400">({user?.employeeId})</span> */}
-              PPM <span className="text-gray-400"> (Admin)</span>
+              PPM <span className="text-gray-700"> (Admin)</span>
             </span>
-            <button onClick={logout} className="btn-secondary px-3 py-1.5 text-xs">
+            <button onClick={logout} className="btn-primary px-3 py-1.5 text-xs">
               Logout
             </button>
           </div>

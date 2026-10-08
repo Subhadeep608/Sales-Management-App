@@ -21,6 +21,9 @@ import EmployeeLayout from './layouts/EmployeeLayout';
 import EmployeeDashboard from './pages/employee/EmployeeDashboard';
 import MyRecords from './pages/employee/MyRecords';
 import EmployeeRecordDetail from './pages/employee/RecordDetail';
+import FollowUps from './pages/employee/FollowUps';
+
+
 
 function HomeRedirect() {
   const { user, loading } = useAuth();
@@ -57,6 +60,7 @@ export default function App() {
                   <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
                   <Route path="/employee/records" element={<MyRecords />} />
                   <Route path="/employee/records/:id" element={<EmployeeRecordDetail />} />
+                  <Route path="/employee/follow-ups" element={<FollowUps />} />
                 </Route>
               </Route>
             </Route>

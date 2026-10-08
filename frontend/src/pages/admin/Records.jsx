@@ -80,7 +80,6 @@ export default function Records() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-800">Records</h1>
         {selected.length > 0 && (
           <button className="btn-primary" onClick={() => setShowAssign(true)}>
             Assign {selected.length} Selected

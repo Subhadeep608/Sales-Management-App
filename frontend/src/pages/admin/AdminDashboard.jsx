@@ -5,11 +5,11 @@ import IconStatCard from '../../components/IconStatCard';
 import { STATUS_OPTIONS } from '../../components/StatusBadge';
 
 const STATUS_ICONS = {
-  pending: { icon: '⏳', color: 'gray' },
-  contacted: { icon: '📞', color: 'blue' },
-  interested: { icon: '⭐', color: 'yellow' },
-  follow_up: { icon: '🔁', color: 'purple' },
-  not_interested: { icon: '❌', color: 'red' },
+  pending: { icon: '⏳', color: 'red' },
+  contacted: { icon: '📞', color: 'yellow' },
+  interested: { icon: '⭐', color: 'blue' },
+  follow_up: { icon: '🔁', color: 'gray' },
+  not_interested: { icon: '❌', color: 'lightgray' },
   converted: { icon: '🏆', color: 'green' },
 };
 
@@ -52,21 +52,19 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-gray-800">Admin Dashboard</h1>
 
       {/* Row 1 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <IconStatCard icon="👤" label="Total Employees" value={stats.totalEmployees} color="blue" />
+        <IconStatCard icon="👤" label="Total Employees" value={stats.totalEmployees} color="yellow" />
         <IconStatCard icon="📄" label="Total Record Files" value={stats.totalImportFiles} color="green" />
-        <IconStatCard icon="✅" label="Assigned" value={stats.assignedFiles} color="yellow" />
-        <IconStatCard icon="🚫" label="Unassigned" value={stats.unassignedFiles} color="red" />
+        <IconStatCard icon="✅" label="Assigned" value={stats.assignedFiles} color="gray" />
+        <IconStatCard icon="🚫" label="Unassigned" value={stats.unassignedFiles} color="lightgray" />
       </div>
 
       {/* Row 2 - sheet performance filter + status breakdown */}
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="card p-5 lg:col-span-1">
-          <h2 className="font-medium text-gray-700 mb-4">Sheet Performance Information</h2>
-          <label className="block text-sm font-medium text-gray-700 mb-1">A Dropdown List</label>
+          <h2 className="font-medium text-gray-700 mb-4">Sheet Performance Report</h2>
           <select className="input" value={selectedFileId} onChange={(e) => setSelectedFileId(e.target.value)}>
             <option value="">Show All Records-file</option>
             {imports.map((imp) => (

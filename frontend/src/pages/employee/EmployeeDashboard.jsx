@@ -7,11 +7,11 @@ import { useAuth } from '../../context/AuthContext';
 const today = () => new Date().toISOString().slice(0, 10);
 
 const STATUS_ICONS = {
-  pending: { icon: '⏳', color: 'gray' },
-  contacted: { icon: '📞', color: 'blue' },
-  interested: { icon: '⭐', color: 'yellow' },
-  follow_up: { icon: '🔁', color: 'purple' },
-  not_interested: { icon: '❌', color: 'red' },
+  pending: { icon: '⏳', color: 'red' },
+  contacted: { icon: '📞', color: 'yellow' },
+  interested: { icon: '⭐', color: 'blue' },
+  follow_up: { icon: '🔁', color: 'gray' },
+  not_interested: { icon: '❌', color: 'lightgray' },
   converted: { icon: '🏆', color: 'green' },
 };
 
@@ -68,29 +68,29 @@ export default function EmployeeDashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-gray-800">Welcome, {user?.name}</h1>
-
+      <h1 className="text-xl font-semibold text-gray-800">Welcome, <span className="font-bold text-orange-600">{user?.name}</span></h1>
+      {/* Top Report row */}
       <div className="card p-5">
         <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
-          <h2 className="font-medium text-gray-700">My Daily Work</h2>
+          {/* <h2 className="font-medium text-gray-700">My Daily Work</h2> */}
           <input type="date" className="input w-44" value={workDate} max={today()} onChange={handleDateChange} />
         </div>
         {!workSummary ? (
           <p className="text-sm text-gray-400">Loading...</p>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <IconStatCard icon="📞" color="blue" label="Contacted" value={workSummary.breakdown.contacted} />
-            <IconStatCard icon="🔁" color="purple" label="Follow Up" value={workSummary.breakdown.follow_up} />
+            <IconStatCard icon="📞" color="yellow" label="Contacted" value={workSummary.breakdown.contacted} />
+            <IconStatCard icon="🔁" color="gray" label="Follow Up" value={workSummary.breakdown.follow_up} />
             <IconStatCard icon="🏆" color="green" label="Converted" value={workSummary.breakdown.converted} />
-            <IconStatCard icon="📋" color="yellow" label="Total Connections" value={workSummary.totalWorked} />
+            <IconStatCard icon="📋" color="blue" label="Total Connections" value={workSummary.totalWorked} />
           </div>
         )}
       </div>
 
+        {/* Second My Records Row */}
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="card p-5 lg:col-span-1">
           <h2 className="font-medium text-gray-700 mb-4">My Records</h2>
-          <label className="block text-sm font-medium text-gray-700 mb-1">A Dropdown List</label>
           <select className="input" value={selectedFileId} onChange={(e) => setSelectedFileId(e.target.value)}>
             <option value="">Show All Records-file</option>
             {files.map((f) => (

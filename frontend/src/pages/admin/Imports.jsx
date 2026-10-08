@@ -70,12 +70,11 @@ export default function Imports() {
   };
 
   const filteredImports = imports.filter((imp) =>
-    tab === 'myfile' ? imp.source === 'manual' : imp.source !== 'manual'
+     tab === 'myfile' ? imp.source === 'manual' || imp.source === 'self' : imp.source === 'excel'
   );
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-gray-800">Records</h1>
 
       <div className="flex gap-1 border-b border-gray-200">
         <button

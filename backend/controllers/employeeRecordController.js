@@ -8,12 +8,45 @@ const logActivity = require('../utils/activityLogger');
 const { getPagination, buildPaginationResult } = require('../utils/paginate');
 
 const WORK_ACTIONS = ['status_change', 'comment_added', 'follow_up_set'];
+const MY_MANUAL_FILE_NAME = 'Your-Added-Data';
+
+// POST /api/employee/records/manual
+// Lets an employee add one raw record by hand, automatically assigned to
+// themselves. Grouped under a shared "Your-Added-Data" file so it appears in
+// their own My Records list and dashboard dropdown. Visible to admin (Records
+// tab lists every Import), but invisible to other employees since every
+// employee-facing query is already scoped to assignedTo === that employee.
+const createMyManualRecord = asyncHandler(async (req, res) => {
+  const { customerName, phone, email, leadSource } = req.body;
+
+  let importDoc = await Import.findOne({ source: 'self' });
+  if (!importDoc) {
+    importDoc = await Import.create({
+      fileName: MY_MANUAL_FILE_NAME,
+      uploadedBy: req.user._id,
+      source: 'self',
+      totalRows: 0,
+      importedCount: 0,
+    });
+  }
+
+  const record = await Record.create({
+    customerName,
+    phone,
+    email: email || '',
+    leadSource: leadSource || '',
+    assignedTo: req.user._id,
+    importBatch: importDoc._id,
+  });
+
+  res.status(201).json({
+    success: true,
+    message: 'Record added successfully.',
+    record,
+  });
+});
 
 // GET /api/employee/records/report?date=&status=&search=&page=&limit=
-// Flat, filterable list of every record assigned to this employee — same shape
-// as the admin Reports table, minus the User column (it's always this employee).
-// Date/Time shown = the latest status/comment/follow-up change this employee
-// made that date, or the record's import/creation time if untouched.
 const myReport = asyncHandler(async (req, res) => {
   const { date, status, search } = req.query;
   const { page, limit, skip } = getPagination(req.query);
@@ -51,8 +84,6 @@ const myReport = asyncHandler(async (req, res) => {
 
   const allRecordIds = new Set([...recordEventMap.keys(), ...recordsInRange.map((r) => String(r._id))]);
 
-  // Re-fetch restricted to records CURRENTLY assigned to this employee, so a
-  // record reassigned away after being worked on no longer shows up for them.
   const allRecords = await Record.find({ _id: { $in: [...allRecordIds] }, assignedTo: req.user._id })
     .select('customerName phone email status leadSource importBatch createdAt')
     .lean();
@@ -127,6 +158,35 @@ const myReport = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, date: date || null, ...buildPaginationResult(pageRows, total, page, limit) });
 });
 
+
+// GET /api/employee/records/follow-ups?date=YYYY-MM-DD (optional)
+// Lists every record assigned to this employee that has a follow-up date set.
+// With no date filter, shows all of them sorted soonest-first. With a date,
+// narrows to records whose follow-up date falls on that specific day.
+const myFollowUps = asyncHandler(async (req, res) => {
+  const { date } = req.query;
+  const { page, limit, skip } = getPagination(req.query);
+
+  const filter = { assignedTo: req.user._id, followUpDate: { $ne: null } };
+
+  if (date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new AppError('Invalid date format.', 400);
+    const start = new Date(`${date}T00:00:00.000Z`);
+    if (Number.isNaN(start.getTime())) throw new AppError('Invalid date.', 400);
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 1);
+    filter.followUpDate = { $gte: start, $lt: end };
+  }
+
+  const [records, total] = await Promise.all([
+    Record.find(filter).sort({ followUpDate: 1 }).skip(skip).limit(limit),
+    Record.countDocuments(filter),
+  ]);
+
+  res.status(200).json({ success: true, ...buildPaginationResult(records, total, page, limit) });
+});
+
+
 // GET /api/employee/records
 const myRecords = asyncHandler(async (req, res) => {
   const { search, status, importBatch } = req.query;
@@ -193,6 +253,7 @@ const getMyRecord = asyncHandler(async (req, res) => {
 const updateMyRecord = asyncHandler(async (req, res) => {
   const { status, comment, followUpDate, customerName, phone, email } = req.body;
   const record = await loadOwnRecordOrFail(req.params.id, req.user._id);
+
   if (customerName !== undefined) record.customerName = customerName;
   if (phone !== undefined) record.phone = phone;
   if (email !== undefined) record.email = email;
@@ -283,4 +344,13 @@ const dailyWorkSummary = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, date: dateStr, totalWorked, breakdown });
 });
 
-module.exports = { myRecords, getMyRecord, updateMyRecord, myAssignedFiles, dailyWorkSummary, myReport };
+module.exports = {
+  myRecords,
+  getMyRecord,
+  updateMyRecord,
+  myAssignedFiles,
+  dailyWorkSummary,
+  myReport,
+  createMyManualRecord,
+  myFollowUps,
+};

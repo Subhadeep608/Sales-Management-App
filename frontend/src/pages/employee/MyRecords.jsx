@@ -3,9 +3,14 @@ import { Link } from 'react-router-dom';
 import api from '../../api/axios';
 import Pagination from '../../components/Pagination';
 import EmptyState from '../../components/EmptyState';
+import Modal from '../../components/Modal';
 import StatusBadge, { STATUS_OPTIONS } from '../../components/StatusBadge';
+import { useToast } from '../../context/ToastContext';
+
+const emptyAddForm = { customerName: '', phone: '', email: '', leadSource: '' };
 
 export default function MyRecords() {
+  const { showToast } = useToast();
   const [date, setDate] = useState('');
   const [status, setStatus] = useState('');
   const [search, setSearch] = useState('');
@@ -13,6 +18,11 @@ export default function MyRecords() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const [showAdd, setShowAdd] = useState(false);
+  const [addForm, setAddForm] = useState(emptyAddForm);
+  const [addError, setAddError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const load = async (filters, selectedPage) => {
     setLoading(true);
@@ -55,11 +65,34 @@ export default function MyRecords() {
     load({ date, status, search }, newPage);
   };
 
+  const handleAddRecord = async (e) => {
+    e.preventDefault();
+    setAddError('');
+    setSaving(true);
+    try {
+      await api.post('/employee/records/manual', addForm);
+      showToast('Record added successfully.');
+      setShowAdd(false);
+      setAddForm(emptyAddForm);
+      load({ date, status, search }, 1);
+      setPage(1);
+    } catch (err) {
+      setAddError(err.response?.data?.message || 'Unable to add record.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const hasActiveFilters = date || status || search;
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-gray-800">My Assigned Records</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-gray-800">Assigned Records</h1>
+        <button className="btn-primary" onClick={() => setShowAdd(true)}>
+          + Add Record
+        </button>
+      </div>
 
       <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
         <div>
@@ -152,6 +185,56 @@ export default function MyRecords() {
         )}
         {data && <Pagination pagination={data.pagination} onPageChange={handlePageChange} />}
       </div>
+
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add Record">
+        {addError && <div className="mb-3 rounded-md bg-red-50 text-red-700 text-sm px-3 py-2">{addError}</div>}
+        <form onSubmit={handleAddRecord} className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name *</label>
+            <input
+              className="input"
+              value={addForm.customerName}
+              onChange={(e) => setAddForm({ ...addForm, customerName: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+            <input
+              className="input"
+              value={addForm.phone}
+              onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              type="email"
+              className="input"
+              value={addForm.email}
+              onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Lead Source</label>
+            <input
+              className="input"
+              placeholder="e.g. Referral, Walk-in"
+              value={addForm.leadSource}
+              onChange={(e) => setAddForm({ ...addForm, leadSource: e.target.value })}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" className="btn-secondary" onClick={() => setShowAdd(false)}>
+              Cancel
+            </button>
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? 'Adding...' : 'Add Record'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

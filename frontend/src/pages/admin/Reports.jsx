@@ -67,9 +67,10 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
+      <h1 className="text-xl font-semibold text-gray-800">Filter Report</h1>
       <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+          {/* <label className="block text-sm font-medium text-gray-700 mb-1">Date</label> */}
           <input
             type="date"
             className="input w-40"
@@ -79,7 +80,7 @@ export default function Reports() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          {/* <label className="block text-sm font-medium text-gray-700 mb-1">Status</label> */}
           <select className="input w-40" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">All statuses</option>
             {STATUS_OPTIONS.map((o) => (
@@ -90,7 +91,7 @@ export default function Reports() {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
+          {/* <label className="block text-sm font-medium text-gray-700 mb-1">Search</label> */}
           <input
             className="input w-52"
             placeholder="Name, email, or phone"
@@ -99,7 +100,7 @@ export default function Reports() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">User</label>
+          {/* <label className="block text-sm font-medium text-gray-700 mb-1">User</label> */}
           <select className="input w-48" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
             <option value="">All users</option>
             {employees.map((emp) => (
@@ -127,8 +128,8 @@ export default function Reports() {
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <IconStatCard icon="📋" label="Total Listed Data" value={data.summary.totalListed} color="blue" />
-            <IconStatCard icon="⭐" label="Total Interested" value={data.summary.totalInterested} color="yellow" />
-            <IconStatCard icon="📞" label="Total Contacted" value={data.summary.totalContacted} color="green" />
+            <IconStatCard icon="⭐" label="Total Interested" value={data.summary.totalInterested} color="green" />
+            <IconStatCard icon="📞" label="Total Contacted" value={data.summary.totalContacted} color="yellow" />
             <IconStatCard icon="🏆" label="Total Converted" value={data.summary.totalConverted} color="purple" />
           </div>
 

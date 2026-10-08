@@ -97,10 +97,9 @@ export default function Assignments() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-gray-800">Assignments</h1>
 
       <div className="card p-5">
-        <h2 className="font-medium text-gray-700 mb-3">Add Manual Record</h2>
+        <h2 className="font-medium text-gray-800 mb-3">Add Manual Record</h2>
         <p className="text-sm text-gray-500 mb-4">
           Add a single customer record by hand and assign it directly to an employee — useful for a lead that
           didn't come from an Excel file. It will appear under "Manually Added Records" in Records and in that

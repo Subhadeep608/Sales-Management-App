@@ -8,7 +8,6 @@ const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { getPagination, buildPaginationResult } = require('../utils/paginate');
 
-// Only these 3 fields are extracted from an uploaded Excel file.
 const APP_FIELDS = ['customerName', 'phone', 'email'];
 const REQUIRED_FIELDS = ['customerName', 'phone'];
 
@@ -68,8 +67,6 @@ const previewExcel = asyncHandler(async (req, res) => {
 });
 
 // POST /api/imports/confirm (admin)
-// Body: { fileName, columnMapping: { customerName, phone, email }, rows, leadSource }
-// leadSource is a single value the admin types, applied to every row of this file.
 const confirmImport = asyncHandler(async (req, res) => {
   const { fileName, columnMapping, rows, leadSource } = req.body;
 
@@ -144,20 +141,33 @@ const confirmImport = asyncHandler(async (req, res) => {
 });
 
 // GET /api/imports (admin)
+// Deliberately excludes source: 'self' (employee-added "Your-Added-Data").
+// Admin has nothing to manage for those — no renaming, assigning, or viewing
+// as a file. They still appear in Reports, since that tab reads directly from
+// Record/Activity rather than this Imports list.
 const listImports = asyncHandler(async (req, res) => {
   const { page, limit, skip } = getPagination(req.query);
+  const baseFilter = { source: { $ne: 'self' } };
 
   const [imports, total] = await Promise.all([
-    Import.find().populate('uploadedBy', 'name employeeId').sort({ createdAt: -1 }).skip(skip).limit(limit),
-    Import.countDocuments(),
+    Import.find(baseFilter).populate('uploadedBy', 'name employeeId').sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Import.countDocuments(baseFilter),
   ]);
 
   const importIds = imports.map((imp) => imp._id);
 
-  const pairs = await Record.aggregate([
-    { $match: { importBatch: { $in: importIds } } },
-    { $group: { _id: { importBatch: '$importBatch', assignedTo: '$assignedTo' } } },
+  const [pairs, recordCounts] = await Promise.all([
+    Record.aggregate([
+      { $match: { importBatch: { $in: importIds } } },
+      { $group: { _id: { importBatch: '$importBatch', assignedTo: '$assignedTo' } } },
+    ]),
+    Record.aggregate([
+      { $match: { importBatch: { $in: importIds } } },
+      { $group: { _id: '$importBatch', count: { $sum: 1 } } },
+    ]),
   ]);
+
+  const liveCountMap = new Map(recordCounts.map((r) => [String(r._id), r.count]));
 
   const assigneesByImport = new Map();
   pairs.forEach((p) => {
@@ -173,6 +183,7 @@ const listImports = asyncHandler(async (req, res) => {
   const importsWithSummary = imports.map((imp) => {
     const key = String(imp._id);
     const assigneeIds = [...(assigneesByImport.get(key) || [])];
+    const liveCount = liveCountMap.get(key) || 0;
 
     let assignedToSummary = { type: 'unassigned', label: 'Unassigned' };
     if (assigneeIds.length === 1) {
@@ -186,7 +197,13 @@ const listImports = asyncHandler(async (req, res) => {
       assignedToSummary = { type: 'multiple', label: 'Multiple Employees' };
     }
 
-    return { ...imp.toObject(), assignedToSummary };
+    const obj = imp.toObject();
+    if (imp.source === 'manual') {
+      obj.totalRows = liveCount;
+      obj.importedCount = liveCount;
+    }
+
+    return { ...obj, assignedToSummary };
   });
 
   res.status(200).json({ success: true, ...buildPaginationResult(importsWithSummary, total, page, limit) });

@@ -8,7 +8,10 @@ const {
   myAssignedFiles,
   dailyWorkSummary,
   myReport,
+  createMyManualRecord,
+  myFollowUps,
 } = require('../controllers/employeeRecordController');
+
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const validate = require('../middleware/validateMiddleware');
@@ -37,7 +40,24 @@ router.get(
   validate,
   myReport
 );
+router.post(
+  '/manual',
+  [
+    body('customerName').trim().isLength({ min: 1, max: 150 }).withMessage('Customer name is required.'),
+    body('phone').trim().isLength({ min: 1, max: 30 }).withMessage('Phone is required.'),
+    body('email').optional({ checkFalsy: true }).isEmail().withMessage('Please enter a valid email.'),
+    body('leadSource').optional({ checkFalsy: true }).trim().isLength({ max: 150 }),
+  ],
+  validate,
+  createMyManualRecord
+);
 router.get('/', myRecords);
+router.get(
+  '/follow-ups',
+  [query('date').optional({ checkFalsy: true }).matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('date must be in YYYY-MM-DD format.')],
+  validate,
+  myFollowUps
+);
 router.get('/:id', idParam, validate, getMyRecord);
 router.put(
   '/:id',

@@ -51,6 +51,16 @@ export default function Employees() {
     load();
   };
 
+  // Turns a backend validation error response into a readable message.
+  // The backend returns { message, errors: [{ field, message }] } on 400s.
+  const extractErrorMessage = (err, fallback) => {
+    const apiErrors = err.response?.data?.errors;
+    if (Array.isArray(apiErrors) && apiErrors.length > 0) {
+      return apiErrors.map((e) => `${e.field}: ${e.message}`).join(' | ');
+    }
+    return err.response?.data?.message || fallback;
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
     setFormError('');
@@ -62,7 +72,7 @@ export default function Employees() {
       setForm(emptyForm);
       load();
     } catch (err) {
-      setFormError(err.response?.data?.message || 'Unable to create employee.');
+      setFormError(extractErrorMessage(err, 'Unable to create employee.'));
     } finally {
       setSaving(false);
     }
@@ -77,12 +87,7 @@ export default function Employees() {
       setEditEmployee(null);
       load();
     } catch (err) {
-      const apiErrors = err.response?.data?.errors;
-      if (Array.isArray(apiErrors) && apiErrors.length > 0) {
-        setFormError(apiErrors.map((e) => e.message).join(' '));
-      } else {
-        setFormError(err.response?.data?.message || 'Unable to create employee.');
-      }
+      showToast(extractErrorMessage(err, 'Unable to update employee.'), 'error');
     } finally {
       setSaving(false);
     }
@@ -95,7 +100,7 @@ export default function Employees() {
       showToast(`Employee ${nextStatus === 'active' ? 'activated' : 'deactivated'} successfully.`);
       load();
     } catch (err) {
-      showToast(err.response?.data?.message || 'Unable to update status.', 'error');
+      showToast(extractErrorMessage(err, 'Unable to update status.'), 'error');
     }
   };
 
@@ -108,7 +113,7 @@ export default function Employees() {
       setResetTarget(null);
       setNewPassword('');
     } catch (err) {
-      showToast(err.response?.data?.message || 'Unable to reset password.', 'error');
+      showToast(extractErrorMessage(err, 'Unable to reset password.'), 'error');
     } finally {
       setSaving(false);
     }
@@ -199,7 +204,15 @@ export default function Employees() {
       </div>
 
       {/* Create Employee Modal */}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Add Employee">
+      <Modal
+        open={showCreate}
+        onClose={() => {
+          setShowCreate(false);
+          setFormError('');
+          setForm(emptyForm);
+        }}
+        title="Add Employee"
+      >
         {formError && <div className="mb-3 rounded-md bg-red-50 text-red-700 text-sm px-3 py-2">{formError}</div>}
         <form onSubmit={handleCreate} className="space-y-3">
           <div>
@@ -211,6 +224,7 @@ export default function Employees() {
               placeholder="EMP001"
               required
             />
+            <p className="text-xs text-gray-400 mt-1">3-20 characters: letters, numbers, - or _ only.</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
@@ -242,11 +256,20 @@ export default function Employees() {
               required
             />
             <p className="text-xs text-gray-400 mt-1">
-              Must be 8+ characters with an uppercase letter, lowercase letter, number, and symbol.
+              8+ characters, with at least one uppercase letter, one lowercase letter, one number, and one symbol
+              (e.g. <code>Sales@2026</code>).
             </p>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                setShowCreate(false);
+                setFormError('');
+                setForm(emptyForm);
+              }}
+            >
               Cancel
             </button>
             <button type="submit" className="btn-primary" disabled={saving}>
@@ -299,9 +322,12 @@ export default function Employees() {
               className="input"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Min 8 chars, upper/lower/number/symbol"
+              placeholder="e.g. Sales@2026"
               required
             />
+            <p className="text-xs text-gray-400 mt-1">
+              8+ characters, with at least one uppercase letter, one lowercase letter, one number, and one symbol.
+            </p>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" className="btn-secondary" onClick={() => setResetTarget(null)}>

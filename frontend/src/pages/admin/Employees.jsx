@@ -77,7 +77,12 @@ export default function Employees() {
       setEditEmployee(null);
       load();
     } catch (err) {
-      showToast(err.response?.data?.message || 'Unable to update employee.', 'error');
+      const apiErrors = err.response?.data?.errors;
+      if (Array.isArray(apiErrors) && apiErrors.length > 0) {
+        setFormError(apiErrors.map((e) => e.message).join(' '));
+      } else {
+        setFormError(err.response?.data?.message || 'Unable to create employee.');
+      }
     } finally {
       setSaving(false);
     }
@@ -233,9 +238,12 @@ export default function Employees() {
               className="input"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              placeholder="Min 8 chars, upper/lower/number/symbol"
+              placeholder="e.g. Sales@2026"
               required
             />
+            <p className="text-xs text-gray-400 mt-1">
+              Must be 8+ characters with an uppercase letter, lowercase letter, number, and symbol.
+            </p>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>

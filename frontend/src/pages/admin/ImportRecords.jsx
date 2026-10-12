@@ -164,13 +164,13 @@ export default function ImportRecords() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
-                <th className="px-4 py-2">Sr. No.</th>
+                <th className="font-medium px-4 py-2">Sr. No.</th>
                 <th className="px-4 py-2">Name</th>
                 <th className="px-4 py-2">Phone</th>
                 <th className="px-4 py-2">Email</th>
                 <th className="px-4 py-2">Lead Source</th>
                 <th className="px-4 py-2">Date</th>
-                <th className="px-4 py-2">Time</th>
+                {/* <th className="px-4 py-2">Time</th> */}
                 <th className="px-4 py-2">Actions</th>
               </tr>
             </thead>
@@ -185,8 +185,23 @@ export default function ImportRecords() {
                     <td className="px-4 py-2">{r.phone}</td>
                     <td className="px-4 py-2">{r.email || '-'}</td>
                     <td className="px-4 py-2">{leadSource}</td>
-                    <td className="px-4 py-2 whitespace-nowrap">{ts.toLocaleDateString()}</td>
-                    <td className="px-4 py-2 whitespace-nowrap">{ts.toLocaleTimeString()}</td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <span>
+                        {ts.toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                        ,
+                      </span>
+                      <span className="text-xs text-gray-500 ml-1">
+                        {ts.toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true,
+                        }).replace(' ', '')}
+                      </span> 
+                    </td>
                     <td className="px-4 py-2 space-x-2 whitespace-nowrap">
                       <button className="text-brand-600 hover:underline text-xs" onClick={() => startEdit(r)}>
                         Edit

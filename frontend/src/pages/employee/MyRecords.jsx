@@ -6,8 +6,10 @@ import EmptyState from '../../components/EmptyState';
 import Modal from '../../components/Modal';
 import StatusBadge, { STATUS_OPTIONS } from '../../components/StatusBadge';
 import { useToast } from '../../context/ToastContext';
+import { LEAD_SOURCE_OPTIONS, DEFAULT_LEAD_SOURCE } from '../../constants/leadSources';
 
-const emptyAddForm = { customerName: '', phone: '', email: '', leadSource: '' };
+
+const emptyAddForm = { customerName: '', phone: '', email: '', leadSource: DEFAULT_LEAD_SOURCE };
 
 export default function MyRecords() {
   const { showToast } = useToast();
@@ -23,6 +25,8 @@ export default function MyRecords() {
   const [addForm, setAddForm] = useState(emptyAddForm);
   const [addError, setAddError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  
 
   const load = async (filters, selectedPage) => {
     setLoading(true);
@@ -83,12 +87,14 @@ export default function MyRecords() {
     }
   };
 
+  
+
   const hasActiveFilters = date || status || search;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-800">Assigned Records</h1>
+        <h1 className="text-xl font-semibold text-gray-800">My Assigned Records</h1>
         <button className="btn-primary" onClick={() => setShowAdd(true)}>
           + Add Record
         </button>
@@ -137,13 +143,24 @@ export default function MyRecords() {
 
       {error && <div className="rounded-md bg-red-50 text-red-700 text-sm px-3 py-2">{error}</div>}
 
-      <div className="card overflow-x-auto">
+      <div className="card overflow-x-auto" style={{ minWidth: '900px' }}>
         {loading ? (
           <p className="p-6 text-sm text-gray-500">Loading...</p>
         ) : !data || data.data.length === 0 ? (
           <EmptyState title="No records found" description="Try adjusting your filters." />
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full table-fixed text-sm">
+            <colgroup>
+              <col style={{ width: '45px' }} />
+              <col style={{ width: '170px' }} />
+              <col style={{ width: '110px' }} />
+              <col style={{ width: '230px' }} />
+              <col style={{ width: '135px' }} />
+              <col style={{ width: '140px' }} />
+              <col style={{ width: '120px' }} />
+              <col style={{ width: '170px' }} />
+              <col style={{ width: '130px' }} />
+            </colgroup>
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
                 <th className="px-4 py-2">Sr. No.</th>
@@ -154,7 +171,7 @@ export default function MyRecords() {
                 <th className="px-4 py-2">Lead Source</th>
                 <th className="px-4 py-2">Time</th>
                 <th className="px-4 py-2">Date</th>
-                <th className="px-4 py-2"></th>
+                <th className="px-4 py-2">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -172,10 +189,13 @@ export default function MyRecords() {
                     <td className="px-4 py-2">{r.leadSource}</td>
                     <td className="px-4 py-2 whitespace-nowrap">{ts.toLocaleTimeString()}</td>
                     <td className="px-4 py-2 whitespace-nowrap">{ts.toLocaleDateString()}</td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2 space-x-2 whitespace-nowrap">
                       <Link to={`/employee/records/${r.recordId}`} className="text-brand-600 hover:underline text-xs">
                         Open
                       </Link>
+                      {/* <button className="text-red-600 hover:underline text-xs" onClick={() => setDeleteTarget(r)}>
+                        Delete
+                      </button> */}
                     </td>
                   </tr>
                 );
@@ -216,15 +236,22 @@ export default function MyRecords() {
               onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Lead Source</label>
-            <input
+            <select
               className="input"
-              placeholder="e.g. Referral, Walk-in"
               value={addForm.leadSource}
               onChange={(e) => setAddForm({ ...addForm, leadSource: e.target.value })}
-            />
+            >
+              {LEAD_SOURCE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
           </div>
+
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" className="btn-secondary" onClick={() => setShowAdd(false)}>
               Cancel
@@ -235,6 +262,8 @@ export default function MyRecords() {
           </div>
         </form>
       </Modal>
+
+
     </div>
   );
 }

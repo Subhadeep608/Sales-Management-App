@@ -56,6 +56,12 @@ const updateRecord = asyncHandler(async (req, res) => {
   const record = await Record.findById(req.params.id);
   if (!record) throw new AppError('Record not found.', 404);
 
+  // If the phone is being changed, make sure it doesn't collide with another record.
+  if (phone !== undefined && phone.trim() !== record.phone) {
+    const existing = await Record.findOne({ phone: phone.trim(), _id: { $ne: record._id } });
+    if (existing) throw new AppError('Another record with this phone number already exists.', 409);
+  }
+
   if (customerName !== undefined) record.customerName = customerName;
   if (phone !== undefined) record.phone = phone;
   if (email !== undefined) record.email = email;
@@ -67,7 +73,6 @@ const updateRecord = asyncHandler(async (req, res) => {
 });
 
 // DELETE /api/records/:id (admin)
-// Also decrements the parent Import's row counters so file-level totals stay accurate.
 const deleteRecord = asyncHandler(async (req, res) => {
   const record = await Record.findByIdAndDelete(req.params.id);
   if (!record) throw new AppError('Record not found.', 404);
@@ -85,6 +90,12 @@ const deleteRecord = asyncHandler(async (req, res) => {
 // POST /api/records/manual (admin)
 const createManualRecord = asyncHandler(async (req, res) => {
   const { customerName, phone, email, leadSource, employeeId } = req.body;
+
+  const trimmedPhone = phone.trim();
+  const existing = await Record.findOne({ phone: trimmedPhone });
+  if (existing) {
+    throw new AppError('A record with this phone number already exists.', 409);
+  }
 
   const employee = await User.findOne({ _id: employeeId, role: 'employee' });
   if (!employee) throw new AppError('Employee not found.', 404);
@@ -105,7 +116,7 @@ const createManualRecord = asyncHandler(async (req, res) => {
 
   const record = await Record.create({
     customerName,
-    phone,
+    phone: trimmedPhone,
     email: email || '',
     leadSource: leadSource || '',
     assignedTo: employee._id,

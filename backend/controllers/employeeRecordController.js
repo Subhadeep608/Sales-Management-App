@@ -11,13 +11,14 @@ const WORK_ACTIONS = ['status_change', 'comment_added', 'follow_up_set'];
 const MY_MANUAL_FILE_NAME = 'Your-Added-Data';
 
 // POST /api/employee/records/manual
-// Lets an employee add one raw record by hand, automatically assigned to
-// themselves. Grouped under a shared "Your-Added-Data" file so it appears in
-// their own My Records list and dashboard dropdown. Visible to admin (Records
-// tab lists every Import), but invisible to other employees since every
-// employee-facing query is already scoped to assignedTo === that employee.
 const createMyManualRecord = asyncHandler(async (req, res) => {
   const { customerName, phone, email, leadSource } = req.body;
+
+  const trimmedPhone = phone.trim();
+  const existing = await Record.findOne({ phone: trimmedPhone });
+  if (existing) {
+    throw new AppError('A record with this phone number already exists.', 409);
+  }
 
   let importDoc = await Import.findOne({ source: 'self' });
   if (!importDoc) {
@@ -32,7 +33,7 @@ const createMyManualRecord = asyncHandler(async (req, res) => {
 
   const record = await Record.create({
     customerName,
-    phone,
+    phone: trimmedPhone,
     email: email || '',
     leadSource: leadSource || '',
     assignedTo: req.user._id,
@@ -158,35 +159,6 @@ const myReport = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, date: date || null, ...buildPaginationResult(pageRows, total, page, limit) });
 });
 
-
-// GET /api/employee/records/follow-ups?date=YYYY-MM-DD (optional)
-// Lists every record assigned to this employee that has a follow-up date set.
-// With no date filter, shows all of them sorted soonest-first. With a date,
-// narrows to records whose follow-up date falls on that specific day.
-const myFollowUps = asyncHandler(async (req, res) => {
-  const { date } = req.query;
-  const { page, limit, skip } = getPagination(req.query);
-
-  const filter = { assignedTo: req.user._id, followUpDate: { $ne: null } };
-
-  if (date) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new AppError('Invalid date format.', 400);
-    const start = new Date(`${date}T00:00:00.000Z`);
-    if (Number.isNaN(start.getTime())) throw new AppError('Invalid date.', 400);
-    const end = new Date(start);
-    end.setUTCDate(end.getUTCDate() + 1);
-    filter.followUpDate = { $gte: start, $lt: end };
-  }
-
-  const [records, total] = await Promise.all([
-    Record.find(filter).sort({ followUpDate: 1 }).skip(skip).limit(limit),
-    Record.countDocuments(filter),
-  ]);
-
-  res.status(200).json({ success: true, ...buildPaginationResult(records, total, page, limit) });
-});
-
-
 // GET /api/employee/records
 const myRecords = asyncHandler(async (req, res) => {
   const { search, status, importBatch } = req.query;
@@ -254,6 +226,11 @@ const updateMyRecord = asyncHandler(async (req, res) => {
   const { status, comment, followUpDate, customerName, phone, email } = req.body;
   const record = await loadOwnRecordOrFail(req.params.id, req.user._id);
 
+  if (phone !== undefined && phone.trim() !== record.phone) {
+    const existing = await Record.findOne({ phone: phone.trim(), _id: { $ne: record._id } });
+    if (existing) throw new AppError('Another record with this phone number already exists.', 409);
+  }
+
   if (customerName !== undefined) record.customerName = customerName;
   if (phone !== undefined) record.phone = phone;
   if (email !== undefined) record.email = email;
@@ -300,6 +277,22 @@ const updateMyRecord = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Record updated successfully.', record: updated });
 });
 
+// DELETE /api/employee/records/:id
+// Employees may only delete records currently assigned to them.
+const deleteMyRecord = asyncHandler(async (req, res) => {
+  const record = await Record.findOneAndDelete({ _id: req.params.id, assignedTo: req.user._id });
+  if (!record) throw new AppError('Record not found.', 404);
+
+  if (record.importBatch) {
+    await Import.updateOne(
+      { _id: record.importBatch },
+      { $inc: { totalRows: -1, importedCount: -1 } }
+    );
+  }
+
+  res.status(200).json({ success: true, message: 'Record deleted successfully.' });
+});
+
 // GET /api/employee/records/daily-summary?date=YYYY-MM-DD (defaults to today)
 const dailyWorkSummary = asyncHandler(async (req, res) => {
   const dateStr = req.query.date || new Date().toISOString().slice(0, 10);
@@ -344,10 +337,35 @@ const dailyWorkSummary = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, date: dateStr, totalWorked, breakdown });
 });
 
+// GET /api/employee/records/follow-ups?date=YYYY-MM-DD (optional)
+const myFollowUps = asyncHandler(async (req, res) => {
+  const { date } = req.query;
+  const { page, limit, skip } = getPagination(req.query);
+
+  const filter = { assignedTo: req.user._id, followUpDate: { $ne: null } };
+
+  if (date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new AppError('Invalid date format.', 400);
+    const start = new Date(`${date}T00:00:00.000Z`);
+    if (Number.isNaN(start.getTime())) throw new AppError('Invalid date.', 400);
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 1);
+    filter.followUpDate = { $gte: start, $lt: end };
+  }
+
+  const [records, total] = await Promise.all([
+    Record.find(filter).sort({ followUpDate: 1 }).skip(skip).limit(limit),
+    Record.countDocuments(filter),
+  ]);
+
+  res.status(200).json({ success: true, ...buildPaginationResult(records, total, page, limit) });
+});
+
 module.exports = {
   myRecords,
   getMyRecord,
   updateMyRecord,
+  deleteMyRecord,
   myAssignedFiles,
   dailyWorkSummary,
   myReport,

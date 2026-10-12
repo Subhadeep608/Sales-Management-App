@@ -5,13 +5,13 @@ const {
   myRecords,
   getMyRecord,
   updateMyRecord,
+  deleteMyRecord,
   myAssignedFiles,
   dailyWorkSummary,
   myReport,
   createMyManualRecord,
   myFollowUps,
 } = require('../controllers/employeeRecordController');
-
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const validate = require('../middleware/validateMiddleware');
@@ -40,6 +40,12 @@ router.get(
   validate,
   myReport
 );
+router.get(
+  '/follow-ups',
+  [query('date').optional({ checkFalsy: true }).matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('date must be in YYYY-MM-DD format.')],
+  validate,
+  myFollowUps
+);
 router.post(
   '/manual',
   [
@@ -52,12 +58,6 @@ router.post(
   createMyManualRecord
 );
 router.get('/', myRecords);
-router.get(
-  '/follow-ups',
-  [query('date').optional({ checkFalsy: true }).matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('date must be in YYYY-MM-DD format.')],
-  validate,
-  myFollowUps
-);
 router.get('/:id', idParam, validate, getMyRecord);
 router.put(
   '/:id',
@@ -73,5 +73,6 @@ router.put(
   validate,
   updateMyRecord
 );
+router.delete('/:id', idParam, validate, deleteMyRecord);
 
 module.exports = router;

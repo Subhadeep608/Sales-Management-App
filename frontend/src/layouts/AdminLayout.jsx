@@ -4,10 +4,11 @@ import { useAuth } from '../context/AuthContext';
 const links = [
   { to: '/admin/dashboard', label: 'Dashboard' },
   { to: '/admin/employees', label: 'Employees' },
-  { to: '/admin/import', label: 'Import Excel' },
-  { to: '/admin/records', label: 'Records' },
-  { to: '/admin/assignments', label: 'Assignments' },
-  { to: '/admin/reports', label: 'Reports' },
+  { to: '/admin/import', label: 'Import Record' },
+  { to: '/admin/records', label: 'All Records' },
+  { to: '/admin/assignments', label: 'Assign Records' },
+  { to: '/admin/reports', label: 'All Reports' },
+  { to: '/admin/follow-ups', label: 'Follow Up Records' },
 ];
 
 export default function AdminLayout() {
@@ -26,8 +27,7 @@ export default function AdminLayout() {
               key={link.to}
               to={link.to}
               className={({ isActive }) =>
-                `block rounded-md px-3 py-2 text-sm font-medium ${
-                  isActive ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50'
+                `block rounded-md px-3 py-2 text-sm font-medium ${isActive ? 'bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50'
                 }`
               }
             >

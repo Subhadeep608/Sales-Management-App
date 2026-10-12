@@ -152,4 +152,34 @@ const dailyReport = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { dailyReport };
+// GET /api/reports/follow-ups?date=&employeeId=&page=&limit= (admin)
+// Lists every record (any employee) that has a follow-up date set.
+const allFollowUps = asyncHandler(async (req, res) => {
+  const { date, employeeId } = req.query;
+  const { page, limit, skip } = getPagination(req.query);
+
+  const filter = { followUpDate: { $ne: null } };
+  if (employeeId) filter.assignedTo = employeeId;
+
+  if (date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new AppError('Invalid date format.', 400);
+    const start = new Date(`${date}T00:00:00.000Z`);
+    if (Number.isNaN(start.getTime())) throw new AppError('Invalid date.', 400);
+    const end = new Date(start);
+    end.setUTCDate(end.getUTCDate() + 1);
+    filter.followUpDate = { $gte: start, $lt: end };
+  }
+
+  const [records, total] = await Promise.all([
+    Record.find(filter)
+      .populate('assignedTo', 'name employeeId')
+      .sort({ followUpDate: 1 })
+      .skip(skip)
+      .limit(limit),
+    Record.countDocuments(filter),
+  ]);
+
+  res.status(200).json({ success: true, ...buildPaginationResult(records, total, page, limit) });
+});
+
+module.exports = { dailyReport, allFollowUps };

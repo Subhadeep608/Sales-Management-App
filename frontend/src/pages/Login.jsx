@@ -27,7 +27,9 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="card w-full max-w-sm p-6">
-        <h1 className="text-lg font-semibold text-gray-800">Sales & Marketing Management</h1>
+        <h1 className="text-xl text-orange-600 font-bold text-gray-800">
+          PPM <span className="text-brand-600">CRM</span>
+        </h1>
         <p className="text-sm text-gray-500 mt-1 mb-6">Sign in with your Employee ID or email</p>
 
         {error && (

@@ -42,7 +42,6 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     loadDashboard(selectedFileId || undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFileId]);
 
   if (error) return <div className="text-red-600 text-sm">{error}</div>;

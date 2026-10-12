@@ -76,20 +76,20 @@ export default function Imports() {
   return (
     <div className="space-y-4">
 
-      <div className="flex gap-1 border-b border-gray-200">
+      <div className="flex gap-3 border-b border-gray-200">
         <button
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${tab === 'file' ? 'border-brand-600 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           onClick={() => setTab('file')}
         >
-          File
+          All imported Files
         </button>
         <button
           className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${tab === 'myfile' ? 'border-brand-600 text-brand-700' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           onClick={() => setTab('myfile')}
         >
-          My File
+          Manually Added Records
         </button>
       </div>
 

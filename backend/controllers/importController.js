@@ -67,6 +67,9 @@ const previewExcel = asyncHandler(async (req, res) => {
 });
 
 // POST /api/imports/confirm (admin)
+// Phone number is treated as the unique key: rows whose phone already exists
+// anywhere in the database, or appears more than once within this same file,
+// are skipped and reported as duplicates rather than imported.
 const confirmImport = asyncHandler(async (req, res) => {
   const { fileName, columnMapping, rows, leadSource } = req.body;
 
@@ -94,21 +97,42 @@ const confirmImport = asyncHandler(async (req, res) => {
     totalRows: rows.length,
   });
 
-  const errors = [];
-  const toInsert = [];
-
-  rows.forEach((row, index) => {
+  // Pre-compute the mapped phone for every row, then find which of those
+  // phones already exist in the database.
+  const mappedRows = rows.map((row, index) => {
     const mapped = {};
     APP_FIELDS.forEach((field) => {
       const sourceColumn = columnMapping[field];
       mapped[field] = sourceColumn ? String(row[sourceColumn] ?? '').trim() : '';
     });
+    return { index, mapped };
+  });
 
+  const candidatePhones = [...new Set(mappedRows.map((r) => r.mapped.phone).filter(Boolean))];
+  const existingPhones = new Set(
+    (await Record.find({ phone: { $in: candidatePhones } }).select('phone')).map((r) => r.phone)
+  );
+
+  const errors = [];
+  const toInsert = [];
+  const seenInFile = new Set();
+
+  mappedRows.forEach(({ index, mapped }) => {
     const missing = REQUIRED_FIELDS.filter((f) => !mapped[f]);
     if (missing.length > 0) {
       errors.push({ row: index + 2, message: `Missing required value: ${missing.join(', ')}` });
       return;
     }
+
+    if (existingPhones.has(mapped.phone)) {
+      errors.push({ row: index + 2, message: `Duplicate phone number (${mapped.phone}) already exists in the system.` });
+      return;
+    }
+    if (seenInFile.has(mapped.phone)) {
+      errors.push({ row: index + 2, message: `Duplicate phone number (${mapped.phone}) appears more than once in this file.` });
+      return;
+    }
+    seenInFile.add(mapped.phone);
 
     toInsert.push({ ...mapped, importBatch: importDoc._id });
   });
@@ -141,10 +165,6 @@ const confirmImport = asyncHandler(async (req, res) => {
 });
 
 // GET /api/imports (admin)
-// Deliberately excludes source: 'self' (employee-added "Your-Added-Data").
-// Admin has nothing to manage for those — no renaming, assigning, or viewing
-// as a file. They still appear in Reports, since that tab reads directly from
-// Record/Activity rather than this Imports list.
 const listImports = asyncHandler(async (req, res) => {
   const { page, limit, skip } = getPagination(req.query);
   const baseFilter = { source: { $ne: 'self' } };

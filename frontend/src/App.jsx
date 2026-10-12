@@ -16,6 +16,8 @@ import ImportRecords from './pages/admin/ImportRecords';
 import AdminRecordDetail from './pages/admin/RecordDetail';
 import Assignments from './pages/admin/Assignments';
 import Reports from './pages/admin/Reports';
+import AdminFollowUps from './pages/admin/FollowUps';
+
 
 import EmployeeLayout from './layouts/EmployeeLayout';
 import EmployeeDashboard from './pages/employee/EmployeeDashboard';
@@ -52,6 +54,7 @@ export default function App() {
                   <Route path="/admin/records/detail/:id" element={<AdminRecordDetail />} />
                   <Route path="/admin/assignments" element={<Assignments />} />
                   <Route path="/admin/reports" element={<Reports />} />
+                  <Route path="/admin/follow-ups" element={<AdminFollowUps />} />
                 </Route>
               </Route>
 

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import api from '../../api/axios';
 import { useToast } from '../../context/ToastContext';
+import { LEAD_SOURCE_OPTIONS, DEFAULT_LEAD_SOURCE } from '../../constants/leadSources';
+
 
 const FIELD_LABELS = {
   customerName: 'Customer Name *',
@@ -13,7 +15,7 @@ export default function ImportExcel() {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [mapping, setMapping] = useState({});
-  const [leadSource, setLeadSource] = useState('');
+  const [leadSource, setLeadSource] = useState(DEFAULT_LEAD_SOURCE);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState(null);
@@ -54,7 +56,7 @@ export default function ImportExcel() {
       showToast(res.data.message);
       setPreview(null);
       setFile(null);
-      setLeadSource('');
+      setLeadSource(DEFAULT_LEAD_SOURCE);
     } catch (err) {
       setError(err.response?.data?.message || 'Some rows could not be imported.');
     } finally {
@@ -133,13 +135,18 @@ export default function ImportExcel() {
               Write where this batch of leads came from (e.g. "Facebook Ads", "Website Form"). This value will be
               shown against every record in this file.
             </p>
-            <input
+            <select
               className="input max-w-md"
-              placeholder="e.g. Facebook Ads"
               value={leadSource}
               onChange={(e) => setLeadSource(e.target.value)}
               required
-            />
+            >
+              {LEAD_SOURCE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="card p-4 overflow-x-auto">

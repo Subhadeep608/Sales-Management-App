@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import api from '../../api/axios';
 import EmptyState from '../../components/EmptyState';
 import { useToast } from '../../context/ToastContext';
+import { LEAD_SOURCE_OPTIONS, DEFAULT_LEAD_SOURCE } from '../../constants/leadSources';
 
-const emptyManualForm = { customerName: '', phone: '', email: '', leadSource: '', employeeId: '' };
+const emptyManualForm = { customerName: '', phone: '', email: '', leadSource: DEFAULT_LEAD_SOURCE, employeeId: '' };
 
 export default function Assignments() {
   const { showToast } = useToast();
@@ -99,12 +100,7 @@ export default function Assignments() {
     <div className="space-y-6">
 
       <div className="card p-5">
-        <h2 className="font-medium text-gray-800 mb-3">Add Manual Record</h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Add a single customer record by hand and assign it directly to an employee — useful for a lead that
-          didn't come from an Excel file. It will appear under "Manually Added Records" in Records and in that
-          employee's My Records.
-        </p>
+        <h2 className="font-medium text-gray-800 mb-3">Add Manual Record </h2>
         {manualError && <div className="mb-3 rounded-md bg-red-50 text-red-700 text-sm px-3 py-2">{manualError}</div>}
         <form onSubmit={handleAddManualRecord} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div>
@@ -136,12 +132,17 @@ export default function Assignments() {
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Lead Source</label>
-            <input
+            <select
               className="input"
-              placeholder="e.g. Referral, Walk-in"
               value={manualForm.leadSource}
               onChange={(e) => setManualForm({ ...manualForm, leadSource: e.target.value })}
-            />
+            >
+              {LEAD_SOURCE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="sm:col-span-2 lg:col-span-1">
             <label className="block text-xs text-gray-500 mb-1">Assign To *</label>

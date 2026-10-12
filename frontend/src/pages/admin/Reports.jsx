@@ -144,8 +144,8 @@ export default function Reports() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <IconStatCard icon="📋" label="Total Listed Data" value={data.summary.totalListed} color="blue" />
             <IconStatCard icon="⭐" label="Total Interested" value={data.summary.totalInterested} color="yellow" />
-            <IconStatCard icon="📞" label="Total Contacted" value={data.summary.totalContacted} color="green" />
-            <IconStatCard icon="🏆" label="Total Converted" value={data.summary.totalConverted} color="purple" />
+            <IconStatCard icon="📞" label="Total Contacted" value={data.summary.totalContacted} color="gray" />
+            <IconStatCard icon="🎉" label="Total Joined" value={data.summary.totalJoined} color="green" />
           </div>
 
           <div className="card overflow-x-auto">

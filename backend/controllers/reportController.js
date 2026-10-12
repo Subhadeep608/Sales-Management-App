@@ -6,7 +6,7 @@ const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { getPagination, buildPaginationResult } = require('../utils/paginate');
 
-const STATUS_LIST = ['pending', 'contacted', 'interested', 'follow_up', 'not_interested', 'converted'];
+const STATUS_LIST = ['pending', 'not_connected', 'follow_up', 'interested', 'not_interested', 'joined'];
 const WORK_ACTIONS = ['status_change', 'comment_added', 'follow_up_set'];
 
 // GET /api/reports/daily?date=&status=&search=&employeeId=&page=&limit= (admin)
@@ -135,8 +135,8 @@ const dailyReport = asyncHandler(async (req, res) => {
   const summary = {
     totalListed: allRows.length,
     totalInterested: allRows.filter((r) => r.status === 'interested').length,
-    totalContacted: allRows.filter((r) => r.status === 'contacted').length,
-    totalConverted: allRows.filter((r) => r.status === 'converted').length,
+    totalNotConnected: allRows.filter((r) => r.status === 'not_connected').length,
+    totalJoined: allRows.filter((r) => r.status === 'joined').length,
   };
 
   allRows.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));

@@ -8,11 +8,11 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 const STATUS_ICONS = {
   pending: { icon: '⏳', color: 'red' },
-  contacted: { icon: '📞', color: 'yellow' },
-  interested: { icon: '⭐', color: 'blue' },
-  follow_up: { icon: '🔁', color: 'gray' },
+  not_connected: { icon: '📞', color: 'yellow' },
+  follow_up: { icon: '⭐', color: 'blue' },
+  interested: { icon: '🔁', color: 'gray' },
   not_interested: { icon: '❌', color: 'lightgray' },
-  converted: { icon: '🏆', color: 'green' },
+  joined: { icon: '🏆', color: 'green' },
 };
 
 const STATUS_LABELS = Object.fromEntries(STATUS_OPTIONS.map((o) => [o.value, o.label]));
@@ -80,14 +80,14 @@ export default function EmployeeDashboard() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <IconStatCard icon="📞" color="yellow" label="Contacted" value={workSummary.breakdown.contacted} />
-            <IconStatCard icon="🔁" color="gray" label="Follow Up" value={workSummary.breakdown.follow_up} />
-            <IconStatCard icon="🏆" color="green" label="Converted" value={workSummary.breakdown.converted} />
+            <IconStatCard icon="🔁" color="purple" label="Follow Up" value={workSummary.breakdown.follow_up} />
+            <IconStatCard icon="🏆" color="green" label="Joined" value={workSummary.breakdown.converted} />
             <IconStatCard icon="📋" color="blue" label="Total Connections" value={workSummary.totalWorked} />
           </div>
         )}
       </div>
 
-        {/* Second My Records Row */}
+      {/* Second My Records Row */}
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="card p-5 lg:col-span-1">
           <h2 className="font-medium text-gray-700 mb-4">My Records</h2>

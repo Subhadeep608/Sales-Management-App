@@ -1,19 +1,19 @@
 const STYLES = {
   pending: 'bg-gray-100 text-gray-700',
-  contacted: 'bg-blue-100 text-blue-700',
-  interested: 'bg-yellow-100 text-yellow-800',
+  not_connected: 'bg-orange-100 text-orange-700',
   follow_up: 'bg-purple-100 text-purple-700',
+  interested: 'bg-yellow-100 text-yellow-800',
   not_interested: 'bg-red-100 text-red-700',
-  converted: 'bg-green-100 text-green-700',
+  joined: 'bg-green-100 text-green-700',
 };
 
 const LABELS = {
   pending: 'Pending',
-  contacted: 'Contacted',
-  interested: 'Interested',
+  not_connected: 'Not Connected',
   follow_up: 'Follow Up',
+  interested: 'Interested',
   not_interested: 'Not Interested',
-  converted: 'Converted',
+  joined: 'Joined',
 };
 
 export default function StatusBadge({ status }) {

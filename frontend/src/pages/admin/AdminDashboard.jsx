@@ -6,11 +6,11 @@ import { STATUS_OPTIONS } from '../../components/StatusBadge';
 
 const STATUS_ICONS = {
   pending: { icon: '⏳', color: 'red' },
-  contacted: { icon: '📞', color: 'yellow' },
-  interested: { icon: '⭐', color: 'blue' },
-  follow_up: { icon: '🔁', color: 'gray' },
+  not_connected: { icon: '📞', color: 'yellow' },
+  follow_up: { icon: '⭐', color: 'blue' },
+  interested: { icon: '🔁', color: 'gray' },
   not_interested: { icon: '❌', color: 'lightgray' },
-  converted: { icon: '🏆', color: 'green' },
+  joined: { icon: '🏆', color: 'green' },
 };
 
 const STATUS_LABELS = Object.fromEntries(STATUS_OPTIONS.map((o) => [o.value, o.label]));

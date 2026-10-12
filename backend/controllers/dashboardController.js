@@ -5,7 +5,7 @@ const Import = require('../models/Import');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 
-const STATUS_LIST = ['pending', 'contacted', 'interested', 'follow_up', 'not_interested', 'converted'];
+const STATUS_LIST = ['pending', 'not_connected', 'follow_up', 'interested', 'not_interested', 'joined'];
 
 // GET /api/dashboard/admin?importBatch=<id>
 const adminDashboard = asyncHandler(async (req, res) => {

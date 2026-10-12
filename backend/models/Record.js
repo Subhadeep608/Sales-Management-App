@@ -2,11 +2,11 @@ const mongoose = require('mongoose');
 
 const STATUSES = Object.freeze([
   'pending',
-  'contacted',
-  'interested',
+  'not_connected',
   'follow_up',
+  'interested',
   'not_interested',
-  'converted',
+  'joined',
 ]);
 
 const commentSchema = new mongoose.Schema(
@@ -22,11 +22,8 @@ const recordSchema = new mongoose.Schema(
     customerName: { type: String, required: [true, 'Customer name is required.'], trim: true, maxlength: 150 },
     phone: { type: String, required: [true, 'Phone is required.'], trim: true, maxlength: 30 },
     email: { type: String, trim: true, lowercase: true, maxlength: 150, default: '' },
-    company: { type: String, trim: true, maxlength: 150, default: '' },
-    city: { type: String, trim: true, maxlength: 100, default: '' },
-    product: { type: String, trim: true, maxlength: 150, default: '' },
-    
     leadSource: { type: String, trim: true, maxlength: 150, default: '' },
+
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
 
     status: {

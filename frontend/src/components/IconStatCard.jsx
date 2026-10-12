@@ -6,6 +6,7 @@ export default function IconStatCard({ icon, label, value, color = 'blue' }) {
     red: 'bg-red-400 text-red-600',
     purple: 'bg-purple-400 text-purple-600',
     gray: 'bg-gray-400 text-gray-600',
+    orange: 'bg-orange-400 text-orange-600',
     lightgray: 'bg-gray-100 text-gray-600',
   };
 

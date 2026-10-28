@@ -4,7 +4,7 @@ import EmptyState from '../../components/EmptyState';
 import { useToast } from '../../context/ToastContext';
 import { LEAD_SOURCE_OPTIONS, DEFAULT_LEAD_SOURCE } from '../../constants/leadSources';
 
-const emptyManualForm = { customerName: '', phone: '', email: '', leadSource: DEFAULT_LEAD_SOURCE, employeeId: '' };
+const emptyManualForm = { customerName: '', phone: '', email: '', resumeUrl: '', leadSource: DEFAULT_LEAD_SOURCE, employeeId: '' };
 
 export default function Assignments() {
   const { showToast } = useToast();
@@ -128,6 +128,15 @@ export default function Assignments() {
               className="input"
               value={manualForm.email}
               onChange={(e) => setManualForm({ ...manualForm, email: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Resume URL</label>
+            <input
+              className="input"
+              placeholder="e.g. https://drive.google.com/..."
+              value={manualForm.resumeUrl}
+              onChange={(e) => setManualForm({ ...manualForm, resumeUrl: e.target.value })}
             />
           </div>
           <div>

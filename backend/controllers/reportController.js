@@ -43,13 +43,13 @@ const dailyReport = asyncHandler(async (req, res) => {
   if (start) recordCreateMatch.createdAt = { $gte: start, $lt: end };
 
   const recordsInRange = await Record.find(recordCreateMatch)
-    .select('customerName phone email status leadSource assignedTo importBatch createdAt')
+    .select('customerName phone email resumeUrl status leadSource assignedTo importBatch createdAt')
     .lean();
 
   const allRecordIds = new Set([...recordEventMap.keys(), ...recordsInRange.map((r) => String(r._id))]);
 
   const allRecords = await Record.find({ _id: { $in: [...allRecordIds] } })
-    .select('customerName phone email status leadSource assignedTo importBatch createdAt')
+    .select('customerName phone email resumeUrl status leadSource assignedTo importBatch createdAt')
     .lean();
   const allRecordMap = new Map(allRecords.map((r) => [String(r._id), r]));
 
@@ -84,6 +84,7 @@ const dailyReport = asyncHandler(async (req, res) => {
       customerName: record.customerName,
       phone: record.phone,
       email: record.email || '',
+      resumeUrl: record.resumeUrl || '',
       status: recordStatus,
       timestamp,
       leadSource: record.leadSource || '',
@@ -107,6 +108,7 @@ const dailyReport = asyncHandler(async (req, res) => {
       customerName: r.customerName,
       phone: r.phone,
       email: r.email,
+      resumeUrl: r.resumeUrl,
       status: r.status,
       timestamp: r.timestamp,
       leadSource: r.leadSource || (imp ? imp.leadSource : '') || '-',
@@ -153,7 +155,6 @@ const dailyReport = asyncHandler(async (req, res) => {
 });
 
 // GET /api/reports/follow-ups?date=&employeeId=&page=&limit= (admin)
-// Lists every record (any employee) that has a follow-up date set.
 const allFollowUps = asyncHandler(async (req, res) => {
   const { date, employeeId } = req.query;
   const { page, limit, skip } = getPagination(req.query);

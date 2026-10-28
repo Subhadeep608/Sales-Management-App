@@ -5,6 +5,7 @@ import IconStatCard from '../../components/IconStatCard';
 import EmptyState from '../../components/EmptyState';
 import Pagination from '../../components/Pagination';
 import Modal from '../../components/Modal';
+import ResumeLink from '../../components/ResumeLink';
 import StatusBadge, { STATUS_OPTIONS } from '../../components/StatusBadge';
 import { useToast } from '../../context/ToastContext';
 
@@ -85,10 +86,23 @@ export default function Reports() {
 
   const hasActiveFilters = date || status || search || employeeId;
 
+  // Safe fallbacks so a missing or differently-shaped response can never
+  // crash the page into a blank screen.
+  const summary = data?.summary || {};
+  const rows = data?.data || [];
+  const pagination = data?.pagination || null;
+
   return (
     <div className="space-y-6">
+      <h1 className="text-xl font-semibold text-gray-800">Reports</h1>
+      <p className="text-sm text-gray-500">
+        Shows every record from every file and manual entry. Filter by date, status, a search term, or a specific
+        user.
+      </p>
+
       <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
           <input
             type="date"
             className="input w-40"
@@ -98,6 +112,7 @@ export default function Reports() {
           />
         </div>
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
           <select className="input w-40" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">All statuses</option>
             {STATUS_OPTIONS.map((o) => (
@@ -108,6 +123,7 @@ export default function Reports() {
           </select>
         </div>
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
           <input
             className="input w-52"
             placeholder="Name, email, or phone"
@@ -116,6 +132,7 @@ export default function Reports() {
           />
         </div>
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">User</label>
           <select className="input w-48" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
             <option value="">All users</option>
             {employees.map((emp) => (
@@ -142,75 +159,55 @@ export default function Reports() {
       ) : data ? (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <IconStatCard icon="📋" label="Total Listed Data" value={data.summary.totalListed} color="blue" />
-            <IconStatCard icon="⭐" label="Total Interested" value={data.summary.totalInterested} color="yellow" />
-            <IconStatCard icon="📞" label="Total Contacted" value={data.summary.totalContacted} color="gray" />
-            <IconStatCard icon="🎉" label="Total Joined" value={data.summary.totalJoined} color="green" />
+            <IconStatCard icon="📋" label="Total Listed Data" value={summary.totalListed ?? 0} color="blue" />
+            <IconStatCard icon="⭐" label="Total Interested" value={summary.totalInterested ?? 0} color="yellow" />
+            <IconStatCard icon="📵" label="Total Not Connected" value={summary.totalNotConnected ?? 0} color="orange" />
+            <IconStatCard icon="🎉" label="Total Joined" value={summary.totalJoined ?? 0} color="green" />
           </div>
 
           <div className="card overflow-x-auto">
-            {data.data.length === 0 ? (
+            {rows.length === 0 ? (
               <EmptyState title="No matching records" description="Try adjusting your filters." />
             ) : (
-              <table className="w-full table-fixed text-sm">
-                <colgroup>
-                  <col style={{ width: '45px' }} />
-                  <col style={{ width: '170px' }} />
-                  <col style={{ width: '110px' }} />
-                  <col style={{ width: '230px' }} />
-                  <col style={{ width: '135px' }} />
-                  <col style={{ width: '140px' }} />
-                  <col style={{ width: '120px' }} />
-                  <col style={{ width: '170px' }} />
-                  <col style={{ width: '130px' }} />
-                </colgroup>
-
+              <table className="w-full text-sm">
                 <thead className="bg-gray-50 text-gray-500 text-left">
                   <tr>
-                    <th className=" px-4 py-2">Sr.</th>
-                    <th className=" px-4 py-2">Name</th>
-                    <th className=" px-4 py-2">Phone</th>
-                    <th className=" px-4 py-2">Email</th>
-                    <th className=" px-4 py-2">Status</th>
-                    <th className=" px-4 py-2">User</th>
-                    <th className=" px-4 py-2">Lead Source</th>
-                    <th className=" px-4 py-2">Date</th>
-                    <th className=" px-4 py-2">Actions</th>
+                    <th className="px-4 py-2">Sr. No.</th>
+                    <th className="px-4 py-2">Name</th>
+                    <th className="px-4 py-2">Phone</th>
+                    <th className="px-4 py-2">Email</th>
+                    <th className="px-4 py-2">Resume URL</th>
+                    <th className="px-4 py-2">Status</th>
+                    <th className="px-4 py-2">User</th>
+                    <th className="px-4 py-2">Lead Source</th>
+                    <th className="px-4 py-2">Time</th>
+                    <th className="px-4 py-2">Date</th>
+                    <th className="px-4 py-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {data.data.map((r, i) => {
+                  {rows.map((r, i) => {
                     const ts = new Date(r.timestamp);
+                    const serial = ((pagination?.page ?? 1) - 1) * (pagination?.limit ?? 50) + i + 1;
                     return (
                       <tr key={r.recordId}>
-                        <td className="px-4 py-2">{(data.pagination.page - 1) * data.pagination.limit + i + 1}</td>
+                        <td className="px-4 py-2">{serial}</td>
                         <td className="px-4 py-2 font-medium">{r.customerName}</td>
                         <td className="px-4 py-2">{r.phone}</td>
                         <td className="px-4 py-2">{r.email || '-'}</td>
+                        <td className="px-4 py-2">
+                          <ResumeLink url={r.resumeUrl} />
+                        </td>
                         <td className="px-4 py-2">
                           <StatusBadge status={r.status} />
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap">
                           {r.employeeName}
+                          {r.employeeCode ? ` (${r.employeeCode})` : ''}
                         </td>
                         <td className="px-4 py-2">{r.leadSource}</td>
-                        <td className="px-4 py-2 whitespace-nowrap">
-                          <span>
-                            {ts.toLocaleDateString('en-GB', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            })}
-                            ,
-                          </span>
-                          <span className="text-xs text-gray-500 ml-1">
-                            {ts.toLocaleTimeString('en-US', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: true,
-                            }).replace(' ', '')}
-                          </span>
-                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">{ts.toLocaleTimeString()}</td>
+                        <td className="px-4 py-2 whitespace-nowrap">{ts.toLocaleDateString()}</td>
                         <td className="px-4 py-2 space-x-2 whitespace-nowrap">
                           <button
                             className="text-brand-600 hover:underline text-xs"
@@ -228,7 +225,7 @@ export default function Reports() {
                 </tbody>
               </table>
             )}
-            <Pagination pagination={data.pagination} onPageChange={handlePageChange} />
+            <Pagination pagination={pagination} onPageChange={handlePageChange} />
           </div>
         </>
       ) : null}

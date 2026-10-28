@@ -89,7 +89,7 @@ const deleteRecord = asyncHandler(async (req, res) => {
 
 // POST /api/records/manual (admin)
 const createManualRecord = asyncHandler(async (req, res) => {
-  const { customerName, phone, email, leadSource, employeeId } = req.body;
+  const { customerName, phone, email, leadSource, resumeUrl, employeeId } = req.body;
 
   const trimmedPhone = phone.trim();
   const existing = await Record.findOne({ phone: trimmedPhone });
@@ -118,6 +118,7 @@ const createManualRecord = asyncHandler(async (req, res) => {
     customerName,
     phone: trimmedPhone,
     email: email || '',
+    resumeUrl: resumeUrl || '',
     leadSource: leadSource || '',
     assignedTo: employee._id,
     importBatch: importDoc._id,

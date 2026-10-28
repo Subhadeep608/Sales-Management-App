@@ -14,6 +14,18 @@ const idParam = [param('id').isMongoId().withMessage('Invalid record id.')];
 
 router.get('/', listRecords);
 
+// Same rule the employee routes use: a missing protocol gets https:// added,
+// and only http/https links are accepted. This value becomes a clickable
+// link, so something like "javascript:..." must never be stored.
+const resumeUrlRule = body('resumeUrl')
+  .optional({ checkFalsy: true })
+  .trim()
+  .customSanitizer((v) => (!v ? '' : /^https?:\/\//i.test(v) ? v : `https://${v}`))
+  .isLength({ max: 500 })
+  .withMessage('Resume URL is too long.')
+  .isURL({ protocols: ['http', 'https'], require_protocol: true })
+  .withMessage('Please enter a valid resume URL.');
+
 router.post(
   '/manual',
   [

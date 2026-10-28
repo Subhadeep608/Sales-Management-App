@@ -20,6 +20,7 @@ export default function AdminRecordDetail() {
       customerName: res.data.record.customerName,
       phone: res.data.record.phone,
       email: res.data.record.email,
+      resumeUrl: res.data.record.resumeUrl || '',
       leadSource: res.data.record.leadSource,
     });
     const act = await api.get('/activities', { params: { recordId: id } });
@@ -74,6 +75,27 @@ export default function AdminRecordDetail() {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
           <input className="input" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Resume URL
+            {record.resumeUrl && (
+              <a
+                href={record.resumeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-2 text-xs font-normal text-brand-600 hover:underline"
+              >
+                Open link
+              </a>
+            )}
+          </label>
+          <input
+            className="input"
+            placeholder="e.g. https://drive.google.com/..."
+            value={form.resumeUrl || ''}
+            onChange={(e) => setForm({ ...form, resumeUrl: e.target.value })}
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Lead Source</label>

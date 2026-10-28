@@ -71,6 +71,7 @@ export default function ImportRecords() {
       customerName: record.customerName,
       phone: record.phone,
       email: record.email,
+      resumeUrl: record.resumeUrl || '',
       leadSource: record.leadSource,
     });
   };
@@ -168,6 +169,7 @@ export default function ImportRecords() {
                 <th className="px-4 py-2">Name</th>
                 <th className="px-4 py-2">Phone</th>
                 <th className="px-4 py-2">Email</th>
+                <th className="px-4 py-2">Resume URL</th>
                 <th className="px-4 py-2">Lead Source</th>
                 <th className="px-4 py-2">Date</th>
                 {/* <th className="px-4 py-2">Time</th> */}
@@ -184,6 +186,9 @@ export default function ImportRecords() {
                     <td className="px-4 py-2 font-medium">{r.customerName}</td>
                     <td className="px-4 py-2">{r.phone}</td>
                     <td className="px-4 py-2">{r.email || '-'}</td>
+                    <td className="px-4 py-2">
+                      <ResumeLink url={r.resumeUrl} />
+                    </td>
                     <td className="px-4 py-2">{leadSource}</td>
                     <td className="px-4 py-2 whitespace-nowrap">
                       <span>
@@ -245,6 +250,15 @@ export default function ImportRecords() {
                 className="input"
                 value={editForm.email || ''}
                 onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Resume URL</label>
+              <input
+                className="input"
+                placeholder="e.g. https://drive.google.com/..."
+                value={editForm.resumeUrl || ''}
+                onChange={(e) => setEditForm({ ...editForm, resumeUrl: e.target.value })}
               />
             </div>
             <div>

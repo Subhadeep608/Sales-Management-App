@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../api/axios';
 import Pagination from '../../components/Pagination';
 import EmptyState from '../../components/EmptyState';
@@ -15,13 +15,25 @@ const shortUrl = (url) => (url.length > 15 ? `${url.slice(0, 15)}...` : url);
 
 export default function MyRecords() {
   const { showToast } = useToast();
-  const [date, setDate] = useState('');
-  const [status, setStatus] = useState('');
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // The applied filters and the current page live in the URL, not in component
+  // memory. When you open a record and press Back, the browser returns to this
+  // exact URL, so the same page and filters are restored.
+  const appliedDate = searchParams.get('date') || '';
+  const appliedStatus = searchParams.get('status') || '';
+  const appliedSearch = searchParams.get('search') || '';
+  const page = Math.max(parseInt(searchParams.get('page'), 10) || 1, 1);
+
+  // What the person is typing in the filter boxes before pressing Apply.
+  const [date, setDate] = useState(appliedDate);
+  const [status, setStatus] = useState(appliedStatus);
+  const [search, setSearch] = useState(appliedSearch);
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState(emptyAddForm);
@@ -31,45 +43,71 @@ export default function MyRecords() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  const load = async (filters, selectedPage) => {
-    setLoading(true);
-    setError('');
-    try {
-      const params = { page: selectedPage, limit: 50 };
-      if (filters.date) params.date = filters.date;
-      if (filters.status) params.status = filters.status;
-      if (filters.search) params.search = filters.search;
-      const res = await api.get('/employee/records/report', { params });
-      setData(res.data);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Unable to load records.');
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
+  // Any value not passed in keeps its currently applied value.
+  // replace: true updates the current history entry instead of adding a new
+  // one, so Back from a record goes straight to this list, not through every
+  // page you clicked.
+  const updateParams = ({
+    date: d = appliedDate,
+    status: s = appliedStatus,
+    search: q = appliedSearch,
+    page: p = 1,
+  }) => {
+    const params = new URLSearchParams();
+    if (d) params.set('date', d);
+    if (s) params.set('status', s);
+    if (q) params.set('search', q);
+    if (p > 1) params.set('page', String(p));
+    setSearchParams(params, { replace: true });
   };
 
+  const query = searchParams.toString();
+
   useEffect(() => {
-    load({}, 1);
-  }, []);
+    let cancelled = false;
+
+    const run = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const params = { page, limit: 50 };
+        if (appliedDate) params.date = appliedDate;
+        if (appliedStatus) params.status = appliedStatus;
+        if (appliedSearch) params.search = appliedSearch;
+        const res = await api.get('/employee/records/report', { params });
+        if (!cancelled) setData(res.data);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.response?.data?.message || 'Unable to load records.');
+          setData(null);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    run();
+    // Ignore a slow response from an earlier request if the page changed again.
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, reloadKey]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setPage(1);
-    load({ date, status, search }, 1);
+    updateParams({ date, status, search, page: 1 });
   };
 
   const handleClear = () => {
     setDate('');
     setStatus('');
     setSearch('');
-    setPage(1);
-    load({}, 1);
+    updateParams({ date: '', status: '', search: '', page: 1 });
   };
 
   const handlePageChange = (newPage) => {
-    setPage(newPage);
-    load({ date, status, search }, newPage);
+    updateParams({ page: newPage });
   };
 
   const handleAddRecord = async (e) => {
@@ -81,8 +119,8 @@ export default function MyRecords() {
       showToast('Record added successfully.');
       setShowAdd(false);
       setAddForm(emptyAddForm);
-      load({ date, status, search }, 1);
-      setPage(1);
+      updateParams({ page: 1 });
+      setReloadKey((k) => k + 1);
     } catch (err) {
       const apiErrors = err.response?.data?.errors;
       if (Array.isArray(apiErrors) && apiErrors.length > 0) {
@@ -95,14 +133,19 @@ export default function MyRecords() {
     }
   };
 
-
   const handleDelete = async () => {
     setDeleting(true);
     try {
       await api.delete(`/employee/records/${deleteTarget.recordId}`);
       showToast('Record deleted successfully.');
       setDeleteTarget(null);
-      load({ date, status, search }, page);
+      // If that was the last row on this page, step back one page so you
+      // don't land on an empty page.
+      if (data && data.data.length === 1 && page > 1) {
+        updateParams({ page: page - 1 });
+      } else {
+        setReloadKey((k) => k + 1);
+      }
     } catch (err) {
       showToast(err.response?.data?.message || 'Unable to delete record.', 'error');
     } finally {
@@ -110,10 +153,7 @@ export default function MyRecords() {
     }
   };
 
-  const hasActiveFilters = date || status || search;
-
-
-
+  const hasActiveFilters = appliedDate || appliedStatus || appliedSearch;
 
   return (
     <div className="space-y-4">
@@ -167,25 +207,13 @@ export default function MyRecords() {
 
       {error && <div className="rounded-md bg-red-50 text-red-700 text-sm px-3 py-2">{error}</div>}
 
-      <div className="card overflow-x-auto" style={{ minWidth: '900px' }}>
+      <div className="card overflow-x-auto">
         {loading ? (
           <p className="p-6 text-sm text-gray-500">Loading...</p>
         ) : !data || data.data.length === 0 ? (
           <EmptyState title="No records found" description="Try adjusting your filters." />
         ) : (
-          <table className="w-full table-fixed text-sm">
-            <colgroup>
-              <col style={{ width: '45px' }} />
-              <col style={{ width: '170px' }} />
-              <col style={{ width: '110px' }} />
-              <col style={{ width: '230px' }} />
-              <col style={{ width: '230px' }} />
-              <col style={{ width: '135px' }} />
-              <col style={{ width: '140px' }} />
-              <col style={{ width: '120px' }} />
-              <col style={{ width: '170px' }} />
-              <col style={{ width: '130px' }} />
-            </colgroup>
+          <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
                 <th className="px-4 py-2">Sr. No.</th>
@@ -234,9 +262,9 @@ export default function MyRecords() {
                       <Link to={`/employee/records/${r.recordId}`} className="text-brand-600 hover:underline text-xs">
                         Open
                       </Link>
-                      {/* <button className="text-red-600 hover:underline text-xs" onClick={() => setDeleteTarget(r)}>
+                      <button className="text-red-600 hover:underline text-xs" onClick={() => setDeleteTarget(r)}>
                         Delete
-                      </button> */}
+                      </button>
                     </td>
                   </tr>
                 );
@@ -277,7 +305,6 @@ export default function MyRecords() {
               onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
             />
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Resume URL</label>
             <input
@@ -287,7 +314,6 @@ export default function MyRecords() {
               onChange={(e) => setAddForm({ ...addForm, resumeUrl: e.target.value })}
             />
           </div>
-          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Lead Source</label>
             <select
@@ -302,7 +328,6 @@ export default function MyRecords() {
               ))}
             </select>
           </div>
-
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" className="btn-secondary" onClick={() => setShowAdd(false)}>
               Cancel
@@ -314,7 +339,20 @@ export default function MyRecords() {
         </form>
       </Modal>
 
-
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete Record">
+        <p className="text-sm text-gray-600">
+          This will permanently delete <span className="font-medium">{deleteTarget?.customerName}</span> from the
+          database, including their comments and activity history. This cannot be undone.
+        </p>
+        <div className="flex justify-end gap-2 pt-4">
+          <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>
+            Cancel
+          </button>
+          <button className="btn-danger" disabled={deleting} onClick={handleDelete}>
+            {deleting ? 'Deleting...' : 'OK, Delete'}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -28,6 +28,7 @@ export default function EmployeeRecordDetail() {
         customerName: res.data.record.customerName,
         phone: res.data.record.phone,
         email: res.data.record.email,
+        resumeUrl: res.data.record.resumeUrl || '',
       });
       setStatus(res.data.record.status);
       setFollowUpDate(res.data.record.followUpDate ? res.data.record.followUpDate.substring(0, 10) : '');
@@ -51,7 +52,12 @@ export default function EmployeeRecordDetail() {
       showToast('Record updated successfully.');
       load();
     } catch (err) {
-      showToast(err.response?.data?.message || 'Unable to update record.', 'error');
+      const apiErrors = err.response?.data?.errors;
+      const message =
+        Array.isArray(apiErrors) && apiErrors.length > 0
+          ? apiErrors.map((e2) => e2.message).join(' ')
+          : err.response?.data?.message || 'Unable to update record.';
+      showToast(message, 'error');
     } finally {
       setSavingInfo(false);
     }
@@ -76,8 +82,10 @@ export default function EmployeeRecordDetail() {
     }
   };
 
+
   if (error) return <div className="text-red-600 text-sm">{error}</div>;
   if (!record || !infoForm) return <p className="text-sm text-gray-500">Loading...</p>;
+
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -114,6 +122,28 @@ export default function EmployeeRecordDetail() {
             onChange={(e) => setInfoForm({ ...infoForm, email: e.target.value })}
           />
         </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Resume URL
+            {record.resumeUrl && (
+              <a
+                href={record.resumeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-2 text-xs font-normal text-brand-600 hover:underline"
+              >
+                Open link
+              </a>
+            )}
+          </label>
+          <input
+            className="input"
+            placeholder="e.g. https://drive.google.com/..."
+            value={infoForm.resumeUrl || ''}
+            onChange={(e) => setInfoForm({ ...infoForm, resumeUrl: e.target.value })}
+          />
+        </div>
+        
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Lead Source</label>
           <input className="input bg-gray-50 text-gray-500" value={record.leadSource || '-'} disabled readOnly />

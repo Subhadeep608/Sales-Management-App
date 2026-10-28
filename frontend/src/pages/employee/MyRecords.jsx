@@ -8,8 +8,10 @@ import StatusBadge, { STATUS_OPTIONS } from '../../components/StatusBadge';
 import { useToast } from '../../context/ToastContext';
 import { LEAD_SOURCE_OPTIONS, DEFAULT_LEAD_SOURCE } from '../../constants/leadSources';
 
+const emptyAddForm = { customerName: '', phone: '', email: '', resumeUrl: '', leadSource: DEFAULT_LEAD_SOURCE };
 
-const emptyAddForm = { customerName: '', phone: '', email: '', leadSource: DEFAULT_LEAD_SOURCE };
+// Shows the first 15 characters followed by "..." when the URL is longer.
+const shortUrl = (url) => (url.length > 15 ? `${url.slice(0, 15)}...` : url);
 
 export default function MyRecords() {
   const { showToast } = useToast();
@@ -26,7 +28,8 @@ export default function MyRecords() {
   const [addError, setAddError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = async (filters, selectedPage) => {
     setLoading(true);
@@ -81,15 +84,36 @@ export default function MyRecords() {
       load({ date, status, search }, 1);
       setPage(1);
     } catch (err) {
-      setAddError(err.response?.data?.message || 'Unable to add record.');
+      const apiErrors = err.response?.data?.errors;
+      if (Array.isArray(apiErrors) && apiErrors.length > 0) {
+        setAddError(apiErrors.map((e2) => e2.message).join(' '));
+      } else {
+        setAddError(err.response?.data?.message || 'Unable to add record.');
+      }
     } finally {
       setSaving(false);
     }
   };
 
-  
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.delete(`/employee/records/${deleteTarget.recordId}`);
+      showToast('Record deleted successfully.');
+      setDeleteTarget(null);
+      load({ date, status, search }, page);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Unable to delete record.', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const hasActiveFilters = date || status || search;
+
+
+
 
   return (
     <div className="space-y-4">
@@ -155,6 +179,7 @@ export default function MyRecords() {
               <col style={{ width: '170px' }} />
               <col style={{ width: '110px' }} />
               <col style={{ width: '230px' }} />
+              <col style={{ width: '230px' }} />
               <col style={{ width: '135px' }} />
               <col style={{ width: '140px' }} />
               <col style={{ width: '120px' }} />
@@ -167,6 +192,7 @@ export default function MyRecords() {
                 <th className="px-4 py-2">Name</th>
                 <th className="px-4 py-2">Phone</th>
                 <th className="px-4 py-2">Email</th>
+                <th className="px-4 py-2">Resume URL</th>
                 <th className="px-4 py-2">Status</th>
                 <th className="px-4 py-2">Lead Source</th>
                 <th className="px-4 py-2">Time</th>
@@ -183,6 +209,21 @@ export default function MyRecords() {
                     <td className="px-4 py-2 font-medium">{r.customerName}</td>
                     <td className="px-4 py-2">{r.phone}</td>
                     <td className="px-4 py-2">{r.email || '-'}</td>
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      {r.resumeUrl ? (
+                        <a
+                          href={r.resumeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={r.resumeUrl}
+                          className="text-brand-600 hover:underline"
+                        >
+                          {shortUrl(r.resumeUrl)}
+                        </a>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
                     <td className="px-4 py-2">
                       <StatusBadge status={r.status} />
                     </td>
@@ -237,6 +278,16 @@ export default function MyRecords() {
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Resume URL</label>
+            <input
+              className="input"
+              placeholder="e.g. https://drive.google.com/..."
+              value={addForm.resumeUrl}
+              onChange={(e) => setAddForm({ ...addForm, resumeUrl: e.target.value })}
+            />
+          </div>
+          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Lead Source</label>
             <select

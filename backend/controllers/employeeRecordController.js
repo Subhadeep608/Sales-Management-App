@@ -12,7 +12,7 @@ const MY_MANUAL_FILE_NAME = 'Your-Added-Data';
 
 // POST /api/employee/records/manual
 const createMyManualRecord = asyncHandler(async (req, res) => {
-  const { customerName, phone, email, leadSource } = req.body;
+  const { customerName, phone, email, leadSource, resumeUrl } = req.body;
 
   const trimmedPhone = phone.trim();
   const existing = await Record.findOne({ phone: trimmedPhone });
@@ -35,6 +35,7 @@ const createMyManualRecord = asyncHandler(async (req, res) => {
     customerName,
     phone: trimmedPhone,
     email: email || '',
+    resumeUrl: resumeUrl || '',
     leadSource: leadSource || '',
     assignedTo: req.user._id,
     importBatch: importDoc._id,
@@ -80,13 +81,13 @@ const myReport = asyncHandler(async (req, res) => {
   if (start) recordCreateMatch.createdAt = { $gte: start, $lt: end };
 
   const recordsInRange = await Record.find(recordCreateMatch)
-    .select('customerName phone email status leadSource importBatch createdAt')
+    .select('customerName phone email resumeUrl status leadSource importBatch createdAt')
     .lean();
 
   const allRecordIds = new Set([...recordEventMap.keys(), ...recordsInRange.map((r) => String(r._id))]);
 
   const allRecords = await Record.find({ _id: { $in: [...allRecordIds] }, assignedTo: req.user._id })
-    .select('customerName phone email status leadSource importBatch createdAt')
+    .select('customerName phone email resumeUrl status leadSource importBatch createdAt')
     .lean();
   const allRecordMap = new Map(allRecords.map((r) => [String(r._id), r]));
 
@@ -115,6 +116,7 @@ const myReport = asyncHandler(async (req, res) => {
       customerName: record.customerName,
       phone: record.phone,
       email: record.email || '',
+      resumeUrl: record.resumeUrl || '',
       status: recordStatus,
       timestamp,
       leadSource: record.leadSource || '',
@@ -132,6 +134,7 @@ const myReport = asyncHandler(async (req, res) => {
       customerName: r.customerName,
       phone: r.phone,
       email: r.email,
+      resumeUrl: r.resumeUrl,
       status: r.status,
       timestamp: r.timestamp,
       leadSource: r.leadSource || (imp ? imp.leadSource : '') || '-',
@@ -223,7 +226,7 @@ const getMyRecord = asyncHandler(async (req, res) => {
 
 // PUT /api/employee/records/:id
 const updateMyRecord = asyncHandler(async (req, res) => {
-  const { status, comment, followUpDate, customerName, phone, email } = req.body;
+  const { status, comment, followUpDate, customerName, phone, email, resumeUrl } = req.body;
   const record = await loadOwnRecordOrFail(req.params.id, req.user._id);
 
   if (phone !== undefined && phone.trim() !== record.phone) {
@@ -234,6 +237,7 @@ const updateMyRecord = asyncHandler(async (req, res) => {
   if (customerName !== undefined) record.customerName = customerName;
   if (phone !== undefined) record.phone = phone;
   if (email !== undefined) record.email = email;
+  if (resumeUrl !== undefined) record.resumeUrl = resumeUrl;
 
   if (status !== undefined && status !== record.status) {
     if (!STATUSES.includes(status)) throw new AppError('Invalid status.', 400);
@@ -278,7 +282,6 @@ const updateMyRecord = asyncHandler(async (req, res) => {
 });
 
 // DELETE /api/employee/records/:id
-// Employees may only delete records currently assigned to them.
 const deleteMyRecord = asyncHandler(async (req, res) => {
   const record = await Record.findOneAndDelete({ _id: req.params.id, assignedTo: req.user._id });
   if (!record) throw new AppError('Record not found.', 404);

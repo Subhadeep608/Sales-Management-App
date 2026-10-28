@@ -79,9 +79,9 @@ export default function EmployeeDashboard() {
           <p className="text-sm text-gray-400">Loading...</p>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <IconStatCard icon="📞" color="yellow" label="Contacted" value={workSummary.breakdown.contacted} />
+            <IconStatCard icon="📞" color="yellow" label="Intrasted" value={workSummary.breakdown.interested} />
             <IconStatCard icon="🔁" color="purple" label="Follow Up" value={workSummary.breakdown.follow_up} />
-            <IconStatCard icon="🏆" color="green" label="Joined" value={workSummary.breakdown.converted} />
+            <IconStatCard icon="🏆" color="green" label="Not Intrasted" value={workSummary.breakdown.not_interested} />
             <IconStatCard icon="📋" color="blue" label="Total Connections" value={workSummary.totalWorked} />
           </div>
         )}

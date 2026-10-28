@@ -98,13 +98,6 @@ Open `http://localhost:5173`.
 
 
 
-
-
-
-
-
-
-
 ongoDB connected: ac-j65ijbv-shard-00-01.prckqlo.mongodb.net
 ✔ Created admin: ADMIN001 (admin@example.com)
 password- Admin@12345

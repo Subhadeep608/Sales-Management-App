@@ -51,12 +51,11 @@ const getRecord = asyncHandler(async (req, res) => {
 
 // PUT /api/records/:id (admin) - edit core fields
 const updateRecord = asyncHandler(async (req, res) => {
-  const { customerName, phone, email, leadSource } = req.body;
+  const { customerName, phone, email, leadSource, resumeUrl } = req.body;
 
   const record = await Record.findById(req.params.id);
   if (!record) throw new AppError('Record not found.', 404);
 
-  // If the phone is being changed, make sure it doesn't collide with another record.
   if (phone !== undefined && phone.trim() !== record.phone) {
     const existing = await Record.findOne({ phone: phone.trim(), _id: { $ne: record._id } });
     if (existing) throw new AppError('Another record with this phone number already exists.', 409);
@@ -66,6 +65,7 @@ const updateRecord = asyncHandler(async (req, res) => {
   if (phone !== undefined) record.phone = phone;
   if (email !== undefined) record.email = email;
   if (leadSource !== undefined) record.leadSource = leadSource;
+  if (resumeUrl !== undefined) record.resumeUrl = resumeUrl;
 
   await record.save();
 

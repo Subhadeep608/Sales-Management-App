@@ -23,6 +23,19 @@ router.use(protect, authorize('employee'));
 
 const idParam = [param('id').isMongoId().withMessage('Invalid record id.')];
 
+// Accepts "linkedin.com/in/someone" or a full URL. A missing protocol gets
+// https:// added, and only http/https links are allowed. That restriction
+// matters because this value becomes a clickable link, so something like
+// "javascript:..." must never be accepted.
+const resumeUrlRule = body('resumeUrl')
+  .optional({ checkFalsy: true })
+  .trim()
+  .customSanitizer((v) => (!v ? '' : /^https?:\/\//i.test(v) ? v : `https://${v}`))
+  .isLength({ max: 500 })
+  .withMessage('Resume URL is too long.')
+  .isURL({ protocols: ['http', 'https'], require_protocol: true })
+  .withMessage('Please enter a valid resume URL.');
+
 router.get('/files', myAssignedFiles);
 router.get(
   '/daily-summary',
@@ -52,6 +65,7 @@ router.post(
     body('customerName').trim().isLength({ min: 1, max: 150 }).withMessage('Customer name is required.'),
     body('phone').trim().isLength({ min: 1, max: 30 }).withMessage('Phone is required.'),
     body('email').optional({ checkFalsy: true }).isEmail().withMessage('Please enter a valid email.'),
+    resumeUrlRule,
     body('leadSource').optional({ checkFalsy: true }).trim().isLength({ max: 150 }),
   ],
   validate,
@@ -66,6 +80,7 @@ router.put(
     body('customerName').optional().trim().isLength({ min: 1, max: 150 }),
     body('phone').optional().trim().isLength({ min: 1, max: 30 }),
     body('email').optional().trim(),
+    resumeUrlRule,
     body('status').optional().isIn(STATUSES),
     body('comment').optional().isString().isLength({ max: 2000 }),
     body('followUpDate').optional({ nullable: true }).isISO8601(),

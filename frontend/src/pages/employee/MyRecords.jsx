@@ -262,9 +262,9 @@ export default function MyRecords() {
                       <Link to={`/employee/records/${r.recordId}`} className="text-brand-600 hover:underline text-xs">
                         Open
                       </Link>
-                      <button className="text-red-600 hover:underline text-xs" onClick={() => setDeleteTarget(r)}>
+                      {/* <button className="text-red-600 hover:underline text-xs" onClick={() => setDeleteTarget(r)}>
                         Delete
-                      </button>
+                      </button>  */}
                     </td>
                   </tr>
                 );

@@ -6,6 +6,8 @@ import RangeSelector from '../../components/RangeSelector';
 import { STATUS_OPTIONS } from '../../components/StatusBadge';
 import Modal from '../../components/Modal';
 import { useToast } from '../../context/ToastContext';
+import ResumeLink from '../../components/ResumeLink';
+
 
 const PAGE_SIZE = 50;
 

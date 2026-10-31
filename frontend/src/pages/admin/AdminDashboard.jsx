@@ -1,126 +1,137 @@
-import { useEffect, useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { useEffect, useRef, useState } from 'react';
 import api from '../../api/axios';
 import IconStatCard from '../../components/IconStatCard';
 import { STATUS_OPTIONS } from '../../components/StatusBadge';
 
+const today = () => new Date().toISOString().slice(0, 10);
+
 const STATUS_ICONS = {
-  pending: { icon: '⏳', color: 'red' },
-  not_connected: { icon: '📞', color: 'yellow' },
-  follow_up: { icon: '⭐', color: 'blue' },
-  interested: { icon: '🔁', color: 'gray' },
-  not_interested: { icon: '❌', color: 'lightgray' },
-  joined: { icon: '🏆', color: 'green' },
+  pending: { icon: '⏳', color: 'gray' },
+  not_connected: { icon: '📵', color: 'orange' },
+  follow_up: { icon: '🔁', color: 'purple' },
+  interested: { icon: '⭐', color: 'yellow' },
+  not_interested: { icon: '❌', color: 'red' },
+  joined: { icon: '🎉', color: 'green' },
 };
 
-const STATUS_LABELS = Object.fromEntries(STATUS_OPTIONS.map((o) => [o.value, o.label]));
-
 export default function AdminDashboard() {
-  const [stats, setStats] = useState(null);
-  const [performance, setPerformance] = useState([]);
-  const [employeeLastLogins, setEmployeeLastLogins] = useState([]);
+  const [data, setData] = useState(null);
   const [error, setError] = useState('');
+  const [workDate, setWorkDate] = useState(today());
+  const requestId = useRef(0);
 
-  const [imports, setImports] = useState([]);
-  const [selectedFileId, setSelectedFileId] = useState('');
-
-  const loadDashboard = async (importBatch) => {
-    try {
-      const res = await api.get('/dashboard/admin', { params: importBatch ? { importBatch } : {} });
-      setStats(res.data.stats);
-      setPerformance(res.data.performance);
-      setEmployeeLastLogins(res.data.employeeLastLogins);
-    } catch {
-      setError('Unable to load dashboard data.');
-    }
-  };
-
+  // Reloads when the date changes. The request counter makes sure a slow,
+  // older response can never overwrite a newer one.
   useEffect(() => {
-    loadDashboard();
-    api.get('/imports', { params: { limit: 200 } }).then((res) => setImports(res.data.data));
-  }, []);
+    const id = ++requestId.current;
 
-  useEffect(() => {
-    loadDashboard(selectedFileId || undefined);
-  }, [selectedFileId]);
+    api
+      .get('/dashboard/admin', { params: { date: workDate } })
+      .then((res) => {
+        if (id !== requestId.current) return;
+        setData(res.data);
+        setError('');
+      })
+      .catch(() => {
+        if (id === requestId.current) setError('Unable to load dashboard data.');
+      });
+  }, [workDate]);
 
-  if (error) return <div className="text-red-600 text-sm">{error}</div>;
-  if (!stats) return <div className="text-gray-500 text-sm">Loading dashboard...</div>;
+  if (error && !data) return <div className="text-red-600 text-sm">{error}</div>;
+  if (!data) return <div className="text-gray-500 text-sm">Loading dashboard...</div>;
 
-  const chartData = performance.map((p) => ({ name: p.employeeId, Assigned: p.totalAssigned, Converted: p.converted }));
+  const worked = data.dailyWork?.breakdown || {};
+  const totalConnections =
+    (worked.interested ?? 0) + (worked.follow_up ?? 0) + (worked.not_interested ?? 0);
+  const statusBreakdown = data.stats?.statusBreakdown || {};
+  const joinings = data.joinings || [];
+  const employeeLastLogins = data.employeeLastLogins || [];
 
   return (
     <div className="space-y-6">
+      {error && <div className="rounded-md bg-red-50 text-red-700 text-sm px-3 py-2">{error}</div>}
 
-      {/* Row 1 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <IconStatCard icon="👤" label="Total Employees" value={stats.totalEmployees} color="yellow" />
-        <IconStatCard icon="📄" label="Total Record Files" value={stats.totalImportFiles} color="green" />
-        <IconStatCard icon="✅" label="Assigned" value={stats.assignedFiles} color="gray" />
-        <IconStatCard icon="🚫" label="Unassigned" value={stats.unassignedFiles} color="lightgray" />
-      </div>
-
-      {/* Row 2 - sheet performance filter + status breakdown */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="card p-5 lg:col-span-1">
-          <h2 className="font-medium text-gray-700 mb-4">Sheet Performance Report</h2>
-          <select className="input" value={selectedFileId} onChange={(e) => setSelectedFileId(e.target.value)}>
-            <option value="">Show All Records-file</option>
-            {imports.map((imp) => (
-              <option key={imp._id} value={imp._id}>
-                {imp.fileName}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="lg:col-span-2">
-          {!selectedFileId || !stats.statusBreakdown ? (
-            <div className="card p-6 h-full flex items-center justify-center text-sm text-gray-400 text-center">
-              Select a file from the dropdown to view its status breakdown.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-4">
-              {Object.entries(stats.statusBreakdown).map(([status, count]) => {
-                const meta = STATUS_ICONS[status] || { icon: '•', color: 'gray' };
-                return (
-                  <IconStatCard
-                    key={status}
-                    icon={meta.icon}
-                    color={meta.color}
-                    label={STATUS_LABELS[status] || status}
-                    value={count}
-                  />
-                );
-              })}
-            </div>
-          )}
+      {/* Daily work across every employee */}
+      <div className="card p-5 space-y-4">
+        <input
+          type="date"
+          className="input"
+          value={workDate}
+          max={today()}
+          onChange={(e) => setWorkDate(e.target.value || today())}
+        />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <IconStatCard icon="⭐" color="yellow" label="Interested" value={worked.interested ?? 0} />
+          <IconStatCard icon="🔁" color="purple" label="Follow Up" value={worked.follow_up ?? 0} />
+          <IconStatCard icon="❌" color="red" label="Not Interested" value={worked.not_interested ?? 0} />
+          <IconStatCard icon="📋" color="blue" label="Total Connections" value={totalConnections} />
         </div>
       </div>
 
-      {/* Row 3 - Employee Performance chart (unchanged) + Last Login panel */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="card p-4">
-          <h2 className="font-medium text-gray-700 mb-3">Employee Performance</h2>
-          {performance.length === 0 ? (
-            <p className="text-sm text-gray-400">No assigned records yet.</p>
+      {/* status totals for all records */}
+      <div className="grid lg:grid-cols-1 gap-6">
+        <h2 className="font-medium text-orange-500"> Employee Work Summary </h2>
+        <div className="grid grid-cols-3 gap-4 content-start">
+          {STATUS_OPTIONS.map((o) => {
+            const meta = STATUS_ICONS[o.value] || { icon: '•', color: 'gray' };
+            return (
+              <IconStatCard
+                key={o.value}
+                icon={meta.icon}
+                color={meta.color}
+                label={o.label}
+                value={statusBreakdown[o.value] ?? 0}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+
+      <div className='grid lg:grid-cols-2 gap-6'>
+        {/* Employee joining member */}
+        <div className="card p-5">
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="font-medium text-orange-500">Total Joining</h2>
+            <span className="text-xs text-gray-400">{joinings.length} total</span>
+          </div>
+
+          {joinings.length === 0 ? (
+            <p className="text-sm text-gray-400">No joinings yet.</p>
           ) : (
-            <div style={{ width: '100%', height: 260 }}>
-              <ResponsiveContainer>
-                <BarChart data={chartData}>
-                  <XAxis dataKey="name" fontSize={12} />
-                  <YAxis allowDecimals={false} fontSize={12} />
-                  <Tooltip />
-                  <Bar dataKey="Assigned" fill="#a5b4fc" />
-                  <Bar dataKey="Converted" fill="#4f46e5" />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="max-h-72 overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-gray-500 text-left sticky top-0">
+                  <tr>
+                    <th className="px-3 py-2">Sr. No.</th>
+                    <th className="px-3 py-2">Name</th>
+                    <th className="px-3 py-2">Date</th>
+                    <th className="px-3 py-2">Employee</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {joinings.map((j, i) => (
+                    <tr key={j.recordId}>
+                      <td className="px-3 py-2 text-gray-500">{i + 1}</td>
+                      <td className="px-3 py-2 font-medium">{j.customerName}</td>
+                      <td
+                        className="px-3 py-2 whitespace-nowrap"
+                        title={new Date(j.joinedAt).toLocaleString()}
+                      >
+                        {new Date(j.joinedAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-3 py-2">{j.employeeName}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
 
+        {/* Employee last login */}
         <div className="card p-4">
-          <h2 className="font-medium text-gray-700 mb-3">Employee Last Login</h2>
+          <h2 className="font-medium text-orange-500 mb-3">Employee Last Login</h2>
           {employeeLastLogins.length === 0 ? (
             <p className="text-sm text-gray-400">No employees yet.</p>
           ) : (

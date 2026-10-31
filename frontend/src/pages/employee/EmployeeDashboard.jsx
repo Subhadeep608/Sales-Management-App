@@ -20,17 +20,17 @@ const STATUS_LABELS = Object.fromEntries(STATUS_OPTIONS.map((o) => [o.value, o.l
 export default function EmployeeDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
-  const [files, setFiles] = useState([]);
-  const [selectedFileId, setSelectedFileId] = useState('');
+  const [joinings, setJoinings] = useState([]);
   const [error, setError] = useState('');
 
   const [workDate, setWorkDate] = useState(today());
   const [workSummary, setWorkSummary] = useState(null);
 
-  const loadStats = async (importBatch) => {
+  const loadStats = async () => {
     try {
-      const res = await api.get('/dashboard/employee', { params: importBatch ? { importBatch } : {} });
+      const res = await api.get('/dashboard/employee');
       setStats(res.data.stats);
+      setJoinings(res.data.joinings || []);
     } catch {
       setError('Unable to load dashboard data.');
     }
@@ -48,14 +48,8 @@ export default function EmployeeDashboard() {
   useEffect(() => {
     loadStats();
     loadWorkSummary(workDate);
-    api.get('/employee/records/files').then((res) => setFiles(res.data.files));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    loadStats(selectedFileId || undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFileId]);
 
   const handleDateChange = (e) => {
     const newDate = e.target.value;
@@ -90,18 +84,43 @@ export default function EmployeeDashboard() {
         )}
       </div>
 
-      {/* Second My Records Row */}
+      {/* Second row: My Joining + status totals for all of my records */}
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="card p-5 lg:col-span-1">
-          <h2 className="font-medium text-gray-700 mb-4">My Records</h2>
-          <select className="input" value={selectedFileId} onChange={(e) => setSelectedFileId(e.target.value)}>
-            <option value="">Show All Records-file</option>
-            {files.map((f) => (
-              <option key={f._id} value={f._id}>
-                {f.fileName}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="font-medium text-gray-700">My Joining</h2>
+            <span className="text-xs text-gray-400">{joinings.length} total</span>
+          </div>
+
+          {joinings.length === 0 ? (
+            <p className="text-sm text-gray-400">No joinings yet.</p>
+          ) : (
+            <div className="max-h-72 overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-gray-500 text-left sticky top-0">
+                  <tr>
+                    <th className="px-3 py-2">Sr. No.</th>
+                    <th className="px-3 py-2">Name</th>
+                    <th className="px-3 py-2">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {joinings.map((j, i) => (
+                    <tr key={j.recordId}>
+                      <td className="px-3 py-2 text-gray-500">{i + 1}</td>
+                      <td className="px-3 py-2 font-medium">{j.customerName}</td>
+                      <td
+                        className="px-3 py-2 whitespace-nowrap"
+                        title={new Date(j.joinedAt).toLocaleString()}
+                      >
+                        {new Date(j.joinedAt).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <div className="lg:col-span-2 grid grid-cols-2 gap-4">
@@ -113,7 +132,7 @@ export default function EmployeeDashboard() {
                 icon={meta.icon}
                 color={meta.color}
                 label={STATUS_LABELS[o.value]}
-                value={stats.statusBreakdown[o.value]}
+                value={stats.statusBreakdown?.[o.value] ?? 0}
               />
             );
           })}

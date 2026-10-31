@@ -1,83 +1,153 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../../api/axios';
 import Pagination from '../../components/Pagination';
 import EmptyState from '../../components/EmptyState';
 import StatusBadge from '../../components/StatusBadge';
 
 export default function FollowUps() {
-    const [date, setDate] = useState('');
-    const [page, setPage] = useState(1);
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Read initial filter values from URL
+    const date = searchParams.get('date') || '';
+    const page = Math.max(1, Number(searchParams.get('page')) || 1);
+
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
+    // Local input state for date filter
+    const [selectedDate, setSelectedDate] = useState(date);
+
+    // Keep date input synchronized with browser Back/Forward
+    useEffect(() => {
+        setSelectedDate(date);
+    }, [date]);
+
     const load = async (selectedDate, selectedPage) => {
         setLoading(true);
         setError('');
+
         try {
-            const params = { page: selectedPage, limit: 50 };
+            const params = {
+                page: selectedPage,
+                limit: 50
+            };
+
             if (selectedDate) params.date = selectedDate;
-            const res = await api.get('/employee/records/follow-ups', { params });
+
+            const res = await api.get('/employee/records/follow-ups', {
+                params
+            });
+
             setData(res.data);
         } catch (err) {
-            setError(err.response?.data?.message || 'Unable to load follow-ups.');
+            setError(
+                err.response?.data?.message ||
+                'Unable to load follow-ups.'
+            );
             setData(null);
         } finally {
             setLoading(false);
         }
     };
 
+    // Reload whenever URL filters change
     useEffect(() => {
-        load('', 1);
-    }, []);
+        load(date, page);
+    }, [date, page]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        setPage(1);
-        load(date, 1);
+
+        const params = {};
+
+        if (selectedDate) {
+            params.date = selectedDate;
+        }
+
+        // Reset pagination when applying a new date
+        params.page = '1';
+
+        setSearchParams(params);
     };
 
     const handleClear = () => {
-        setDate('');
-        setPage(1);
-        load('', 1);
+        setSelectedDate('');
+
+        // Remove date filter and reset page
+        setSearchParams({ page: '1' });
     };
 
     const handlePageChange = (newPage) => {
-        setPage(newPage);
-        load(date, newPage);
+        const params = {};
+
+        if (date) {
+            params.date = date;
+        }
+
+        params.page = String(newPage);
+
+        setSearchParams(params);
     };
 
-    const isOverdue = (followUpDate) => new Date(followUpDate) < new Date(new Date().toDateString());
+    const isOverdue = (followUpDate) =>
+        new Date(followUpDate) < new Date(new Date().toDateString());
 
     return (
         <div className="space-y-4">
-            {/* <h1 className="text-xl font-semibold text-gray-800">Follow Up</h1> */}
-            <p className="text-sm text-gray-500">Records you've set a follow-up date on, soonest first.</p>
+            <p className="text-sm text-gray-500">
+                Records you've set a follow-up date on, soonest first.
+            </p>
 
-            <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
+            <form
+                onSubmit={handleSubmit}
+                className="flex flex-wrap items-end gap-2"
+            >
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                    <input type="date" className="input w-44" value={date} onChange={(e) => setDate(e.target.value)} />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Date
+                    </label>
+
+                    <input
+                        type="date"
+                        className="input w-44"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                    />
                 </div>
+
                 <button type="submit" className="btn-primary">
                     Apply
                 </button>
-                {date && (
-                    <button type="button" className="btn-secondary" onClick={handleClear}>
+
+                {selectedDate && (
+                    <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={handleClear}
+                    >
                         Clear
                     </button>
                 )}
             </form>
 
-            {error && <div className="rounded-md bg-red-50 text-red-700 text-sm px-3 py-2">{error}</div>}
+            {error && (
+                <div className="rounded-md bg-red-50 text-red-700 text-sm px-3 py-2">
+                    {error}
+                </div>
+            )}
 
             <div className="card overflow-x-auto">
                 {loading ? (
-                    <p className="p-6 text-sm text-gray-500">Loading...</p>
+                    <p className="p-6 text-sm text-gray-500">
+                        Loading...
+                    </p>
                 ) : !data || data.data.length === 0 ? (
-                    <EmptyState title="No follow-ups found" description="Set a follow-up date on a record to see it here." />
+                    <EmptyState
+                        title="No follow-ups found"
+                        description="Set a follow-up date on a record to see it here."
+                    />
                 ) : (
                     <table className="w-full text-sm">
                         <thead className="bg-gray-50 text-gray-500 text-left">
@@ -90,23 +160,52 @@ export default function FollowUps() {
                                 <th className="px-4 py-2"></th>
                             </tr>
                         </thead>
+
                         <tbody className="divide-y divide-gray-100">
                             {data.data.map((r, i) => (
                                 <tr key={r._id}>
-                                    <td className="px-4 py-2">{(data.pagination.page - 1) * data.pagination.limit + i + 1}</td>
-                                    <td className="px-4 py-2 font-medium">{r.customerName}</td>
-                                    <td className="px-4 py-2">{r.phone}</td>
+                                    <td className="px-4 py-2">
+                                        {(data.pagination.page - 1) *
+                                            data.pagination.limit + i + 1}
+                                    </td>
+
+                                    <td className="px-4 py-2 font-medium">
+                                        {r.customerName}
+                                    </td>
+
+                                    <td className="px-4 py-2">
+                                        {r.phone}
+                                    </td>
+
                                     <td className="px-4 py-2">
                                         <StatusBadge status={r.status} />
                                     </td>
+
                                     <td className="px-4 py-2">
-                                        <span className={isOverdue(r.followUpDate) ? 'text-red-600 font-medium' : ''}>
-                                            {new Date(r.followUpDate).toLocaleDateString()}
+                                        <span
+                                            className={
+                                                isOverdue(r.followUpDate)
+                                                    ? 'text-red-600 font-medium'
+                                                    : ''
+                                            }
+                                        >
+                                            {new Date(
+                                                r.followUpDate
+                                            ).toLocaleDateString()}
                                         </span>
-                                        {isOverdue(r.followUpDate) && <span className="ml-2 badge bg-red-100 text-red-700">Overdue</span>}
+
+                                        {isOverdue(r.followUpDate) && (
+                                            <span className="ml-2 badge bg-red-100 text-red-700">
+                                                Overdue
+                                            </span>
+                                        )}
                                     </td>
+
                                     <td className="px-4 py-2">
-                                        <Link to={`/employee/records/${r._id}`} className="text-brand-600 hover:underline text-xs">
+                                        <Link
+                                            to={`/employee/records/${r._id}`}
+                                            className="text-brand-600 hover:underline text-xs"
+                                        >
                                             Open
                                         </Link>
                                     </td>
@@ -115,7 +214,13 @@ export default function FollowUps() {
                         </tbody>
                     </table>
                 )}
-                {data && <Pagination pagination={data.pagination} onPageChange={handlePageChange} />}
+
+                {data && (
+                    <Pagination
+                        pagination={data.pagination}
+                        onPageChange={handlePageChange}
+                    />
+                )}
             </div>
         </div>
     );

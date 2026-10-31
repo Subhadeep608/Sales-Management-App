@@ -154,7 +154,11 @@ const myReport = asyncHandler(async (req, res) => {
     );
   }
 
-  allRows.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  allRows.sort(
+    (a, b) =>
+      a.customerName.localeCompare(b.customerName, undefined, { sensitivity: 'base', numeric: true }) ||
+      String(a.recordId).localeCompare(String(b.recordId))
+  );
 
   const total = allRows.length;
   const pageRows = allRows.slice(skip, skip + limit);

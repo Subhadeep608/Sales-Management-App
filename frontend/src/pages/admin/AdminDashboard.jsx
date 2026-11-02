@@ -10,6 +10,7 @@ const STATUS_ICONS = {
   not_connected: { icon: '📵', color: 'orange' },
   follow_up: { icon: '🔁', color: 'purple' },
   interested: { icon: '⭐', color: 'yellow' },
+  not_taken_demo: { icon: '🖥️', color: 'purple' },
   not_interested: { icon: '❌', color: 'red' },
   joined: { icon: '🎉', color: 'green' },
 };

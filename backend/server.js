@@ -15,6 +15,8 @@ const employeeRecordRoutes = require('./routes/employeeRecordRoutes');
 const activityRoutes = require('./routes/activityRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+
 
 const requiredEnv = ['MONGO_URI', 'JWT_SECRET'];
 const missing = requiredEnv.filter((key) => !process.env[key]);
@@ -39,6 +41,7 @@ app.use('/api/employee/records', employeeRecordRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

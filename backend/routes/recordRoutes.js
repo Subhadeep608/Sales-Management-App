@@ -1,7 +1,14 @@
 const express = require('express');
 const { param, body } = require('express-validator');
 
-const { listRecords, getRecord, updateRecord, deleteRecord, createManualRecord } = require('../controllers/recordController');
+const {
+  listRecords,
+  getRecord,
+  updateRecord,
+  deleteRecord,
+  assignRecord,
+  createManualRecord,
+} = require('../controllers/recordController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 const validate = require('../middleware/validateMiddleware');
@@ -12,11 +19,9 @@ router.use(protect, authorize('admin'));
 
 const idParam = [param('id').isMongoId().withMessage('Invalid record id.')];
 
-router.get('/', listRecords);
-
-// Same rule the employee routes use: a missing protocol gets https:// added,
-// and only http/https links are accepted. This value becomes a clickable
-// link, so something like "javascript:..." must never be stored.
+// A missing protocol gets https:// added, and only http/https links are
+// accepted. This value becomes a clickable link, so "javascript:..." must
+// never be stored.
 const resumeUrlRule = body('resumeUrl')
   .optional({ checkFalsy: true })
   .trim()
@@ -26,12 +31,15 @@ const resumeUrlRule = body('resumeUrl')
   .isURL({ protocols: ['http', 'https'], require_protocol: true })
   .withMessage('Please enter a valid resume URL.');
 
+router.get('/', listRecords);
+
 router.post(
   '/manual',
   [
     body('customerName').trim().isLength({ min: 1, max: 150 }).withMessage('Customer name is required.'),
     body('phone').trim().isLength({ min: 1, max: 30 }).withMessage('Phone is required.'),
     body('email').optional({ checkFalsy: true }).isEmail().withMessage('Please enter a valid email.'),
+    resumeUrlRule,
     body('leadSource').optional({ checkFalsy: true }).trim().isLength({ max: 150 }),
     body('employeeId').isMongoId().withMessage('A valid employee must be selected.'),
   ],
@@ -40,6 +48,14 @@ router.post(
 );
 
 router.get('/:id', idParam, validate, getRecord);
+
+router.put(
+  '/:id/assign',
+  [...idParam, body('employeeId').isMongoId().withMessage('A valid employee must be selected.')],
+  validate,
+  assignRecord
+);
+
 router.put(
   '/:id',
   [
@@ -47,6 +63,7 @@ router.put(
     body('customerName').optional().trim().isLength({ min: 1, max: 150 }),
     body('phone').optional().trim().isLength({ min: 1, max: 30 }),
     body('email').optional().trim(),
+    resumeUrlRule,
     body('leadSource').optional().trim().isLength({ max: 150 }),
   ],
   validate,

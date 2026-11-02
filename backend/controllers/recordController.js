@@ -5,6 +5,7 @@ const Assignment = require('../models/Assignment');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const logActivity = require('../utils/activityLogger');
+const { notifyRecordAssigned } = require('../utils/notify');
 const { getPagination, buildPaginationResult } = require('../utils/paginate');
 
 const MANUAL_ENTRY_FILE_NAME = 'Manually Added Records';
@@ -87,6 +88,63 @@ const deleteRecord = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Record deleted successfully.' });
 });
 
+// PUT /api/records/:id/assign (admin)
+// Assigns ONE record to an employee, or moves it from its current employee to
+// another. Employee screens only ever load records where assignedTo matches the
+// logged-in employee, so changing that one field is what removes the record from
+// the old employee's lists and shows it to the new employee. The new employee
+// gets a notification.
+const assignRecord = asyncHandler(async (req, res) => {
+  const { employeeId } = req.body;
+
+  const record = await Record.findById(req.params.id).select('customerName assignedTo');
+  if (!record) throw new AppError('Record not found.', 404);
+
+  const employee = await User.findOne({ _id: employeeId, role: 'employee' });
+  if (!employee) throw new AppError('Employee not found.', 404);
+  if (employee.status !== 'active') {
+    throw new AppError('Cannot assign a record to a deactivated employee.', 400);
+  }
+
+  if (record.assignedTo && String(record.assignedTo) === String(employee._id)) {
+    throw new AppError(`This record is already assigned to ${employee.name}.`, 400);
+  }
+
+  const previousAssignedTo = record.assignedTo || null;
+  let previousName = 'Unassigned';
+  if (previousAssignedTo) {
+    const previous = await User.findById(previousAssignedTo).select('name').lean();
+    if (previous) previousName = previous.name;
+  }
+
+  // updateOne rather than save(): only the owner changes, so an older record
+  // with a leftover legacy value elsewhere cannot fail validation here.
+  await Record.updateOne({ _id: record._id }, { $set: { assignedTo: employee._id } });
+
+  await Assignment.create({
+    record: record._id,
+    assignedTo: employee._id,
+    assignedBy: req.user._id,
+    previousAssignedTo,
+  });
+
+  // Names (not ids) so the record's Activity History reads "Rahul -> Deepanjali".
+  await logActivity({
+    record: record._id,
+    employee: req.user._id,
+    action: 'assignment',
+    oldValue: previousName,
+    newValue: employee.name,
+  });
+
+  await notifyRecordAssigned({ userId: employee._id, record });
+
+  res.status(200).json({
+    success: true,
+    message: `"${record.customerName}" assigned to ${employee.name}.`,
+  });
+});
+
 // POST /api/records/manual (admin)
 const createManualRecord = asyncHandler(async (req, res) => {
   const { customerName, phone, email, leadSource, resumeUrl, employeeId } = req.body;
@@ -143,6 +201,8 @@ const createManualRecord = asyncHandler(async (req, res) => {
     newValue: employee._id,
   });
 
+  await notifyRecordAssigned({ userId: employee._id, record });
+
   res.status(201).json({
     success: true,
     message: `Record added and assigned to ${employee.name}.`,
@@ -150,4 +210,4 @@ const createManualRecord = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { listRecords, getRecord, updateRecord, deleteRecord, createManualRecord };
+module.exports = { listRecords, getRecord, updateRecord, deleteRecord, assignRecord, createManualRecord };

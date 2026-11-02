@@ -3,6 +3,7 @@ const STYLES = {
   not_connected: 'bg-orange-100 text-orange-700',
   follow_up: 'bg-purple-100 text-purple-700',
   interested: 'bg-yellow-100 text-yellow-800',
+  not_taken_demo: 'bg-sky-100 text-sky-700',
   not_interested: 'bg-red-100 text-red-700',
   joined: 'bg-green-100 text-green-700',
 };
@@ -12,6 +13,7 @@ const LABELS = {
   not_connected: 'Not Connected',
   follow_up: 'Follow Up',
   interested: 'Interested',
+  not_taken_demo: 'Not Taken Demo',
   not_interested: 'Not Interested',
   joined: 'Joined',
 };

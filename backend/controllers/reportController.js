@@ -67,7 +67,9 @@ const dailyReport = asyncHandler(async (req, res) => {
     let timestamp;
 
     if (event) {
-      employeeObjId = event.employee;
+      // The record's CURRENT owner. After the admin reassigns a record, its
+      // activity still names the previous employee, so the owner must win.
+      employeeObjId = record.assignedTo || event.employee;
       recordStatus = event.lastStatusValue && STATUS_LIST.includes(event.lastStatusValue) ? event.lastStatusValue : record.status;
       timestamp = event.timestamp;
     } else {

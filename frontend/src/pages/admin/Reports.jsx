@@ -8,6 +8,8 @@ import Modal from '../../components/Modal';
 import ResumeLink from '../../components/ResumeLink';
 import StatusBadge, { STATUS_OPTIONS } from '../../components/StatusBadge';
 import { useToast } from '../../context/ToastContext';
+import AssignRecordButton from '../../components/AssignRecordButton';
+
 
 export default function Reports() {
   const navigate = useNavigate();
@@ -218,6 +220,14 @@ export default function Reports() {
                           <button className="text-red-600 hover:underline text-xs" onClick={() => setDeleteTarget(r)}>
                             Delete
                           </button>
+                          
+                          <AssignRecordButton
+                            recordId={r.recordId}
+                            recordName={r.customerName}
+                            currentEmployeeId={r.employeeObjId}
+                            currentLabel={`${r.employeeName}${r.employeeCode ? ` (${r.employeeCode})` : ''}`}
+                            onAssigned={() => load({ date, status, search, employeeId }, page)}
+                          />
                         </td>
                       </tr>
                     );

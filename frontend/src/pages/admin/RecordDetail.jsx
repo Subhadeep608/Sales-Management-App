@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import StatusBadge from '../../components/StatusBadge';
 import { useToast } from '../../context/ToastContext';
+import AssignRecordButton from '../../components/AssignRecordButton';
+
+
 
 export default function AdminRecordDetail() {
   const { id } = useParams();
@@ -112,10 +115,19 @@ export default function AdminRecordDetail() {
         </div>
       </form>
 
-      <div className="card p-5">
-        <h2 className="font-medium text-gray-700 mb-3">
+      <div className="card p-5 flex items-center justify-between gap-3">
+        <h2 className="font-medium text-gray-700">
           Assigned To: {record.assignedTo ? `${record.assignedTo.name} (${record.assignedTo.employeeId})` : 'Unassigned'}
         </h2>
+        <AssignRecordButton
+          recordId={record._id}
+          recordName={record.customerName}
+          currentEmployeeId={record.assignedTo?._id}
+          currentLabel={record.assignedTo ? `${record.assignedTo.name} (${record.assignedTo.employeeId})` : ''}
+          onAssigned={load}
+          triggerLabel={record.assignedTo ? 'Change' : 'Assign'}
+          triggerClassName="btn-secondary px-3 py-1.5 text-xs"
+        />
       </div>
 
       <div className="card p-5">

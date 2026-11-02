@@ -5,6 +5,7 @@ const STATUSES = Object.freeze([
   'not_connected',
   'follow_up',
   'interested',
+  'not_taken_demo',
   'not_interested',
   'joined',
 ]);

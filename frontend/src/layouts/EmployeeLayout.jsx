@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import LoginReminder from '../components/LoginReminder';
+import NotificationBell from '../components/NotificationBell';
 
 
 const links = [
@@ -32,6 +33,8 @@ export default function EmployeeLayout() {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-4">
+           <NotificationBell />
+           
           <span className="text-sm text-gray-600 flex items-center gap-1.2">
             <span aria-hidden="true">👤</span>
             {user?.name}

@@ -5,7 +5,7 @@ const Activity = require('../models/Activity');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 
-const STATUS_LIST = ['pending', 'not_connected', 'follow_up', 'interested', 'not_interested', 'joined'];
+const STATUS_LIST = Record.STATUSES;
 const WORK_ACTIONS = ['status_change', 'comment_added', 'follow_up_set'];
 // 'converted' was this status's old name. Records renamed by the one-time
 // migration still carry it in their history, so both names are matched.
